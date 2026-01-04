@@ -26,6 +26,7 @@ class Graph:
             # add an entry to the edges list (no edges yet)
             self.edges.update({v:[]})
 
+    # adds the edge if it doesn't exist, or else increments the weight
     def addEdge(self, u: Node, v: Node):
         # If the edge is not in the adjacency list, add it (with weight 1)
         if v not in self.edges[u]:

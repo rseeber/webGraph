@@ -1,3 +1,4 @@
+import datetime
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -37,12 +38,22 @@ class Data:
 
 # returns (domain, resource) as a 2-tuple of a URL. Does not verify input.
 def splitURL(link, getDomain=""):
-    # find the first "/" AFTER the "https://"
-    split = link.find("/", 8)
-    # everything after the "/"
-    resource = link[split+1:]
+    # find the first "/" AFTER the protocol ("https://")
+    start = 8
+    if link.find("https://") < 0:
+        start = 7
+        if link.find("http://") < 0:
+            start = 0
+    split = link.find("/", start)
+    # if there is no "/" at the end, that means there is no resource
+    if split < 0:
+        split = len(link)
+        resource = ""
+    else:
+        # everything after the "/"
+        resource = link[split+1:]
     # everything between "https://" and "/"
-    domain = link[8:split]
+    domain = link[start:split]
 
     return domain, resource
 
@@ -53,6 +64,10 @@ def splitDomain(domain):
 
 # fix local links, remove queries, end with a "/"
 def standardizeLink(link, getDomain):
+    # remove "mailto:" links
+    if("mailto:" in link):
+        return None
+
     # convert local links to regular links
     if("https://" not in link and "http://" not in link):
         if(link.find("/") == 0):
@@ -110,6 +125,9 @@ def parseWebpage(pageURL):
             continue
         # standardize it
         link = standardizeLink(link, getDomain) 
+        # input validation
+        if link == None or link == "":
+            continue
 
         # Isolate the domain
         domain, resource = splitURL(link)
@@ -472,6 +490,53 @@ requestHeaders = {"User-Agent":"WebGraphUtility", "From":"riverseeber12@gmail.co
 G = gh.Graph()
 G_domain = gh.Graph()
 
+# Convert a gh.Graph to nx.Graph
+def graphToNxGraph(G: gh.Graph):
+    g = nx.DiGraph()
+
+    # Add the nodes/vertices
+    for v in G.V:
+        print(f"Adding {v.url}")
+        g.add_node(v)
+
+    # Add the edges
+    for e in G.E:
+        print(f"Adding {e.u.url} -> {e.v.url}")
+        g.add_edge(e.u, e.v, weight=e.weight)
+    
+    return g
+
+def graphToDomainGraph(G: gh.Graph):
+    GG_domain = gh.Graph()
+
+    # go through each vertex in the original graph
+    for v in G.V:
+        # grab the domain only
+        domain = splitURL(v.url)[0]
+        # if the domain is not already in the list, add it
+        if domain not in GG_domain.V:
+            GG_domain.V.append(gh.Vertex(domain))
+    
+    # go through the edges
+    for e in G.E:
+        # grab the domain of u
+        u_domain = splitURL(e.u.url)[0]
+        # grab the domain of v
+        v_domain = splitURL(e.v.url)[0]
+
+        print(f"convert u: {e.u.url} to {u_domain}")
+        print(f"convert v: {e.v.url} to {v_domain}")
+        print()
+
+        # add the edge (this func increments weight if it already exists)
+        GG_domain.addEdge_url(u_domain, v_domain)
+
+    return GG_domain
+
+def getTimestamp():
+    dt = datetime.datetime.now()
+    timestamp = f"{str(dt.year)}-{str(dt.month)}-{str(dt.day)}_{str(dt.hour)}-{str(dt.minute)}-{str(dt.second)}"
+    return timestamp
 
 if __name__ == "__main__":
     #urls = ["https://pluralistic.net/"]
@@ -482,48 +547,50 @@ if __name__ == "__main__":
         "youtube.com", "amazon.com", "amazon.co.uk", "wikipedia.org",
         "linkedin.com", "flickr.com", "11ty.dev"
     ]
-
-
     # Convert startUrls from str's Vertex's
     startingNodes = []
     for url in startUrls:
         startingNodes.append(gh.Vertex(url, G))
 
-    spiderDFS(startingNodes, 3)
+    x = input("""What would you like to do?
+    (1) Start the Spider
+    (2) Resume the spider
+    (3) Load the most recent graph and analyze it
+> """)
 
-    G.printGraphSize()
+    x = int(x)
 
-    # Save Graph to disk (or better yet, do it as a distributed thing, so save *while* you're working!)
+    # run the spider
+    if x <= 1:
+        spiderDFS(startingNodes, 3)
+        G.saveToFile("graph")
+    
+    # resume spider
+    if x == 2:
+        pass
 
+    # Save Graph to disk
+    if x <= 2:
+        pass
 
-    # Then convert to nx.Graph
-    g = nx.DiGraph()
-
-    # Add the nodes/vertices
-    for v in G.V:
-        g.add_node(v)
-
-    # Add the edges
-    for e in G.E:
-        g.add_edge(e.u, e.v, weight=e.weight)
-        
-    gh.drawGraph(g, "output/graph.jpg")
-
-    """
-    # Then convert to nx.Graph
-    g_domain = nx.DiGraph()
-
-    # Add the nodes/vertices
-    for v in G_domain.V:
-        g_domain.add_node(v)
-
-    # Add the edges
-    for e in G_domain.E:
-        g_domain.add_edge(e.u, e.v, weight=e.weight)
-
-    gh.drawGraph_simple(g_domain, "output/graph_domain.png")
-
-    """
+    # analysis
+    if x <= 3:
+        #load from disk
+        if x == 3:
+            G.loadFromFile("graph")
 
 
+        G.printGraphSize()
+        timestamp = getTimestamp()
 
+        # Then convert to nx.Graph
+        print("PAGE GRAPH")
+        g = graphToNxGraph(G)
+            
+        gh.drawGraph(g, f"output/pageGraph__{timestamp}.jpg")
+
+        # Convert page Graph into one representing domains only
+        print("DOMAIN GRAPH")
+        DomainGraph = graphToDomainGraph(G)
+        g_domain = graphToNxGraph(DomainGraph)
+        gh.drawGraph(g_domain, f"output/domainGraph__{timestamp}.jpg")

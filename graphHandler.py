@@ -1,7 +1,8 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import random
-
+import pickle
+import shutil
 
 # Classes
 
@@ -41,6 +42,7 @@ class Graph:
             return None
           
 
+    # adds the edge if it doesn't exist, or else increments the weight
     def addEdge(self, myEdge):
         # look for if the edge already exists
         for e in self.E:
@@ -52,6 +54,7 @@ class Graph:
         self.E.append(myEdge)
 
     # Function overload that takes urls instead of an Edge object
+    # adds the edge if it doesn't exist, or else increments the weight
     def addEdge_url(self, u_url, v_url):
         myEdge = Edge(Vertex(u_url), Vertex(v_url))
         self.addEdge(myEdge)
@@ -59,6 +62,20 @@ class Graph:
     def printGraphSize(self):
         print(f"Graph Size:\n\tNodes: {len(self.V)}\n\tEdges: {len(self.E)}")
 
+
+    def saveToFile(self, title):
+        import scrape
+        filename = f"output/{title}__{scrape.getTimestamp()}.pickle"
+        with open(filename, "wb") as f:
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+        
+        # duplicate the file to a mostRecent file
+        shutil.copy(filename, f"output/{title}__mostRecent.pickle")
+
+    # THIS WILL COMPLETELY OVERWRITE EXISTING MEMORY DATA
+    def loadFromFile(self, title):
+        with open(f"output/{title}__mostRecent.pickle", "rb") as f:
+            self = pickle.load(f)
 
 class Vertex:
     def __init__(self, url, G=None, GD=None):
@@ -74,6 +91,12 @@ class Vertex:
 
     def __str__(self):
         return self.url
+
+    # equality is based on if they have the same url
+    def __eq__(self, v):
+        if type(v) == Vertex:
+            return self.url == v.url
+        return False
         
 
     def getAdjacent(self):
@@ -155,7 +178,7 @@ class Edge:
 
 # Draw the graph, with the labels raised slightly above the nodes
 def drawGraph(G: nx.DiGraph, output):
-    plt.figure(figsize=(50, 50))
+    plt.figure(figsize=(30, 30))
     pos_nodes = nx.spring_layout(G, weight="weight")
     #pos_nodes = nx.spectral_layout(G)
     #pos_nodes = nx.shell_layout(G)
@@ -164,7 +187,7 @@ def drawGraph(G: nx.DiGraph, output):
     
     #nx.draw_networkx_nodes(G, pos_nodes, node_size=30)
     #nx.draw_networkx_edges(G, pos_nodes, width=0.1, alpha=0.5)
-    nx.draw(G, pos_nodes, node_size=50, width=0.1)
+    nx.draw(G, pos_nodes, node_size=200, width=0.1)
 
     pos_attrs = {}
     for node, coords in pos_nodes.items():
@@ -175,7 +198,7 @@ def drawGraph(G: nx.DiGraph, output):
     for node, attr in node_attrs.items():
         custom_node_attrs[node] = attr
 
-    nx.draw_networkx_labels(G, pos_attrs, font_size=8)
+    nx.draw_networkx_labels(G, pos_attrs, font_size=16)
 
     #plt.margins(x=0.5, y=1.0)
     plt.savefig(output)
