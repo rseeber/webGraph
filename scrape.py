@@ -496,12 +496,10 @@ def graphToNxGraph(G: gh.Graph):
 
     # Add the nodes/vertices
     for v in G.V:
-        print(f"Adding {v.url}")
         g.add_node(v)
 
     # Add the edges
     for e in G.E:
-        print(f"Adding {e.u.url} -> {e.v.url}")
         g.add_edge(e.u, e.v, weight=e.weight)
     
     return g
@@ -523,10 +521,6 @@ def graphToDomainGraph(G: gh.Graph):
         u_domain = splitURL(e.u.url)[0]
         # grab the domain of v
         v_domain = splitURL(e.v.url)[0]
-
-        print(f"convert u: {e.u.url} to {u_domain}")
-        print(f"convert v: {e.v.url} to {v_domain}")
-        print()
 
         # add the edge (this func increments weight if it already exists)
         GG_domain.addEdge_url(u_domain, v_domain)

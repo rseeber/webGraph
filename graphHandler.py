@@ -179,7 +179,7 @@ class Edge:
 # Draw the graph, with the labels raised slightly above the nodes
 def drawGraph(G: nx.DiGraph, output):
     plt.figure(figsize=(30, 30))
-    pos_nodes = nx.spring_layout(G, weight="weight")
+    pos_nodes = nx.spring_layout(G, weight="weight", k=2.0)
     #pos_nodes = nx.spectral_layout(G)
     #pos_nodes = nx.shell_layout(G)
     #pos_nodes = nx.spectral_layout(G)
@@ -223,27 +223,9 @@ if __name__ == "__main__":
             if random.randint(0, 100) < 25:
                 G.E.append(Edge(G.V[i], G.V[j]))
 
+    import scrape
 
     # Then convert to nx.Graph
-    g = nx.DiGraph()
-
-    """
-    g.add_node("wikipedia.org")
-    g.add_node("google.com")
-    g.add_node("techdirt.com")
-
-    # Add edges
-    g.add_edge("wikipedia.org", "google.com")
-
-    """
-    # Add the nodes/vertices
-    for v in G.V:
-        g.add_node(v)
-
-    # Add the edges
-    for e in G.E:
-        g.add_edge(e.u, e.v, weight=e.weight)
-        
-
-    # Draw it
-    drawGraph_simple(g)
+    g = scrape.graphToNxGraph(G)
+    
+    drawGraph(g, "output/testGraph.jpg")
