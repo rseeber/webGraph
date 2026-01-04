@@ -3,6 +3,37 @@ from bs4 import BeautifulSoup
 import time
 import urllib.robotparser as rp
 import json
+import networkx as nx
+
+import graphHandler as gh
+
+class Data:
+    # linkDict
+    # >>> {
+    #   link1: [link, link, link, ...],
+    #   link2: [...],
+    #   ...
+    # }
+    #
+    # linkProgressDict
+    # >>> [
+    #   {link1: 10, link2: 10},     // n = 0
+    #   {link3: 4, link4: 0, link5: 0, ...},    // n = 1
+    #   ...                                     // ...
+    # ]
+    #
+    # urlIndex      # type = set
+    # >>> (link1, link2, ...)
+    #
+
+    def __init__(self, linkDict={}, linkProgressDict={}, urlIndex=set(())):
+        self.linkDict = linkDict
+        self.linkProgressList = linkProgressDict
+        self.urlIndex = urlIndex
+    def __str__(self):
+        return f"{self.linkDict}, {self.linkProgressDict}, {self.urlIndex}"
+
+
 
 # returns (domain, resource) as a 2-tuple of a URL. Does not verify input.
 def splitURL(link, getDomain=""):
@@ -47,12 +78,29 @@ def standardizeLink(link, getDomain):
 
 def parseWebpage(pageURL):
     getDomain, getResource = splitURL(pageURL)
-    reqs = requests.get(pageURL, headers=requestHeaders)
-    soup = BeautifulSoup(reqs.text, 'html.parser')
+    retry = 0
+    while(retry < 3):
+        print("\nFetching resource: "+pageURL)
+        try:
+            delay = 5 * retry + 1
+            print("Waiting "+str(delay)+" seconds...")
+            # 1, 6, 11, 16 seconds, etc
+            time.sleep(delay)
+            reqs = requests.get(pageURL, headers=requestHeaders)
+            soup = BeautifulSoup(reqs.text, 'html.parser')
+            break
+        except Exception:
+            print("Exception caught. Retrying...")
+            retry += 1
 
     inlinks = []
     outlinks = []
     outdomains = []
+
+    # If we weren't able to fetch the page, return empty lists
+    if(retry == 3):
+        return inlinks, outlinks, outdomains
+
     # iterate through each <a> tag
     for a in soup.find_all('a'):
         # get the link
@@ -92,7 +140,7 @@ def addEdge(myEdge, edges):
     except:
         edges[myEdge] = 1
 
-# deprecated
+# deprecated in favor of countUrls()
 def buildGraph(links, currentUrl, urls, edges, domainEdges):
 
     # iterate through each discovered link, adding an edge from the current page to that link
@@ -151,7 +199,7 @@ def robotsCheck(url):
     
     return allowed, delay
 
-
+# depricated in favor of just using a library (wrapped up inside of robotsCheck())
 def getRobotsTxt(domain):
     # see if we already have it cached
     if domain in robotsTxt:
@@ -189,7 +237,7 @@ def getRobotsTxt(domain):
 # Given a list of urls to start with, it calls parseWebpage() on each. Then, it recursively goes through each of *those*.
 # The function continues until it has found and saved all links N degrees or less from each provided url.
 # In order to continue crawling at a higher degree, simply provide the returned data object.
-def spider(startUrls, N, untrackedDomains, data={}, i=0):
+def spider(startUrls, N, untrackedDomains, data=Data(), i=0):
 
     # if this is the first iteration, initialize the data
     if(i == 0):
@@ -210,11 +258,12 @@ def spider(startUrls, N, untrackedDomains, data={}, i=0):
             "robots.txt": {}
         }
         """
+
         linkDict = {}
         linkProgressDict = {}
         urlIndex = set(())
 
-        data = (linkDict, linkProgressDict, urlIndex)
+        data = Data(linkDict, linkProgressDict, urlIndex)
 
     # Base case
     if(N <= 0):
@@ -232,6 +281,7 @@ def spider(startUrls, N, untrackedDomains, data={}, i=0):
 
     robotsTxt = {}
 
+    linkCount = 0 
     # iterate through the provided pages
     for url in startUrls:
         # check robots.txt
@@ -241,17 +291,17 @@ def spider(startUrls, N, untrackedDomains, data={}, i=0):
 
         
 
-        print("waiting 5 seconds before fetching resource "+url)
+        print("waiting 1 second before fetching resource "+url)
         time.sleep(1)
         # Parse the page
         inlinks, outlinks, outdomains = parseWebpage(url)
 
-        linkDict.update({url: inlinks+outlinks})
-        linkProgressDict.update({url:0})
+        data.linkDict.update({url: inlinks+outlinks})
+        data.linkProgressDict.update({url:0})
 
         countUrls(inlinks+outlinks, urls)
 
-        urlIndex.update(urls)
+        data.urlIndex.update(urls)
 
         # fill out urls, edges, and domainEdges with data from the parsed page
         #buildGraph(inlinks + outlinks, url, urls, edges, domainEdges)
@@ -259,6 +309,9 @@ def spider(startUrls, N, untrackedDomains, data={}, i=0):
         # display some data for the user
         print("urls found: "+str(urls))
         print("url count = "+str(len(urls)))
+        linkCount += 1
+        if(linkCount >= 10):
+            break
 
     # Update the data object
     ## Note: since this is to be a list of lists, append() is correct (don't use extend()!!)
@@ -269,22 +322,208 @@ def spider(startUrls, N, untrackedDomains, data={}, i=0):
 
     # recursion call
     print("REPEAT SPIDER CALL ON "+str(urls))
+    # parse the first k links in each link set
+    k = 10
     return spider(urls, N-1, untrackedDomains, data, i+1)
+
+def spiderBetter(startUrls, N, data=Data(), j=0):
+    if(j == 0):
+        data.linkDict = {}
+        data.linkProgressList = []
+        data.urlIndex = set(())
+
+    # Do the first K urls in set 1
+    #save them to linkDict
+
+    # loop:
+        # Do the first K urls in linkDict which are not yet finished
+        # save those to the linkDict
+        # increment n counter
+        # stop when n == N
+
+    
+    bigK = 10
+    # iterate through each DEPTH LEVEL (each depth level is a unique collection of links)
+    for n in range(N):
+        # get the n'th dict in linkProgressList
+        layer = data.linkProgressList[n]
+
+        # iterate through the first i pages at depth n
+        for i in range(len(data.linkProgressList[n])):
+            # in that, get the i'th key
+            parentLink = layer.keys()[i]
+
+            # iterate through the first k CHILDREN of that page
+            for k in range(bigK):
+                # with that key, access the list of urls at linkDict[key]
+                # myUrl = the k'th url in that list of urls
+                myUrl = data.linkDict[parentLink][k]
+                
+                #myUrl = data.linkDict[data.linkProgressList[n].keys()[i]][k]
+
+                # skip finished urls (for continuing search from a save file)
+                if data.linkProgressList[i][myUrl] >= k:
+                    continue
+
+                # fetch the page and collect links
+                inlinks, outlinks, outdomains = parseWebpage(myUrl)
+                # add 
+                data.linkDict.update({myUrl : inlinks})
+                data.linkProgressDict.update({startUrls[j] : 0})
+
+# spider using Depth-First Search algorithm, using Q as your starting nodes,
+# and crawling a maximum distance of `depth` from any of the starting nodes.
+def spiderDFS(startingNodes, maxDepth):
+    # Assign all our "starting nodes" as unvisited
+    for u in startingNodes:
+        u.color = "white"
+    # Keep crawling until we've finished our DFS on each starting node
+    while len(startingNodes) > 0:
+        # Dequeue an item from the front of the line
+        u = startingNodes.pop(0)
+        # Note: In Intro To Algorithms by CLRS, they only run DRF_visit() if u.color == white.
+        # We don't do that, since we are placing a depth constraint.
+        #
+        # Basically, even though a longer path may have already discovered u, we check it again
+        # because this time we set u.dist to 0, instead of a higher number on that longer path.
+        # If we didn't care about distance from starting nodes, we wouldn't be doing this.
+        #
+        # Also, since fetching the webpage is much much slower than doing graph math,
+        # we can treat retracing our paths as having lower Big O time than the original
+        # fetching of the webpage, which only happens once, even if we retrace the node.
+        spiderDFS_visit(u, 0, maxDepth)
+
+# returns true if you should fetch the site, false otherwise.
+# It's based on both the untrackedDomains, and (eventually) the robots.txt protocol
+def siteCheck(url):
+    track = True
+    for d in untrackedDomains:
+        if d in url:
+            track = False
+
+    # put a robots.txt check here eventually
+    
+    return track
+
+# visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
+def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
+    # if this is our fist time on this node, add it to the graph
+    if(u.color == "white"):
+        G.V.append(u)
+        # also update the domain graph if this is a new domain
+        domain, resource = splitURL(u.url)
+        if(domain not in G_domain):
+            G_domain.V.append(gh.Vertex(domain))
+
+    u.dist = depth
+    u.color = "gray"
+    
+    # Base Case #1
+    # Stop digging if we've hit our maxDepth or if this is a no-go site
+    if (depth >= maxDepth or not siteCheck(u.url)):
+        # Notice that we don't set the color to black, since
+        # we might come back on a spiderDFS_resume() call. 
+        # So we keep it gray in order to denote the threshold 
+        # of discovery.
+        return
+
+    # iterate through each of the adjacent nodes (shares an edge)
+    for v in u.getAdjacent():
+        # Create the edge in the graph
+        G.addEdge(gh.Edge(u, v))
+
+        # and in the domain graph
+        G_domain.addEdge_url(splitURL(u.url)[0], splitURL(v.url)[0])
+
+        # Recursive Case
+        ## we check unvisited nodes, as well as nodes who have "unoptimized" paths
+        ## (see my explanation inside spiderDFS())
+        if (v.color == "white") or (v.dist > u.dist + 1):
+            # visit the child node, incrementing the depth by 1
+            spiderDFS_visit(v, depth + 1, maxDepth)
+        # Base Case #2
+        else:
+            pass
+    u.color = "black"
+
+# after having finished spiderDFS to a given depth, you can call spiderDFS_resume in order
+# to crawl to a deeper depth. Not intended to resume from a crash or outage.
+# Recall that G = (V, E)
+def spiderDFS_resume(maxDepth):
+    startingNodes = []
+    for v in G.V:
+        if v.color != "black":
+            startingNodes.append(v)
+    spiderDFS(startingNodes, maxDepth)
+    return G
+
+# probably not using this one. Just call spiderDFS() yourself.
+def spiderDFS_init(startingNodes, maxDepth):
+    G = gh.Graph()
+    spiderDFS(G, startingNodes, maxDepth)
+
+    return G
+
 
 robotsTxt = {}
 requestHeaders = {"User-Agent":"WebGraphUtility", "From":"riverseeber12@gmail.com"}
 
+# Create an empty graph to start
+G = gh.Graph()
+G_domain = gh.Graph()
+
 
 if __name__ == "__main__":
     #urls = ["https://pluralistic.net/"]
-    startUrls = ["https://pluralistic.net/2025/12/08/giant-teddybears/"]
-    untrackedDomains = ["google.com", "x.com", "twitter.com", "reddit.com"]
+    #startUrls = ["https://pluralistic.net/2025/12/08/giant-teddybears/"]
+    startUrls = ["https://riverseeber.net/"]
+    untrackedDomains = [
+        "google.com", "x.com", "twitter.com", "facebook.com", "reddit.com", 
+        "youtube.com", "amazon.com", "amazon.co.uk", "wikipedia.org",
+        "linkedin.com", "flickr.com", "11ty.dev"
+    ]
 
-    data = spider(startUrls, 2, untrackedDomains)
 
-    f = open("output/data.json", "w")
-    f.write(repr(data))
+    # Convert startUrls from str's Vertex's
+    startingNodes = []
+    for url in startUrls:
+        startingNodes.append(gh.Vertex(url, G))
+
+    spiderDFS(startingNodes, 3)
+
+    G.printGraphSize()
+
+    # Save Graph to disk (or better yet, do it as a distributed thing, so save *while* you're working!)
 
 
-    #f = open("output/data.json", "w")
-    #f.write(myJson)
+    # Then convert to nx.Graph
+    g = nx.DiGraph()
+
+    # Add the nodes/vertices
+    for v in G.V:
+        g.add_node(v)
+
+    # Add the edges
+    for e in G.E:
+        g.add_edge(e.u, e.v, weight=e.weight)
+        
+    gh.drawGraph(g, "output/graph.jpg")
+
+    """
+    # Then convert to nx.Graph
+    g_domain = nx.DiGraph()
+
+    # Add the nodes/vertices
+    for v in G_domain.V:
+        g_domain.add_node(v)
+
+    # Add the edges
+    for e in G_domain.E:
+        g_domain.add_edge(e.u, e.v, weight=e.weight)
+
+    gh.drawGraph_simple(g_domain, "output/graph_domain.png")
+
+    """
+
+
+
