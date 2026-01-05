@@ -203,12 +203,14 @@ class Vertex:
     def __fetchPage(self):
         import scrape
 
-        # Fetch webpage
-        inlinks, outlinks, outdomains = scrape.parseWebpage(self.url)
-
-
         # adjacent nodes
         self.__adjacent = []
+
+        # Fetch webpage
+        if scrape.robotsCheck(self.url):
+            inlinks, outlinks, outdomains = scrape.parseWebpage(self.url)
+        else:
+            return
 
         # temporary index we use to improve Big O speed for
         # checking if a url has already been added.
