@@ -217,7 +217,7 @@ def countUrls(links, urls):
 
 # returns True if the url is allowed to be scraped
 def robotsCheck(url):
-    domain, resource = splitURL
+    domain, resource = splitURL(url)
     rfp = rp.RobotFileParser()
     rfp.set_url(domain+"/robots.txt")
     rfp.read()
