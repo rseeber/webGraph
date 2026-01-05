@@ -611,9 +611,13 @@ if __name__ == "__main__":
     # handle default value
     if nameOpt == "":
         nameOpt = 0
-    nameOpt = int(nameOpt)
+    try:
+        nameOpt = int(nameOpt)
+        title = [nameDefault, "Spider", "Crawl"][nameOpt]
+    # if the user puts in a custom name, just use that
+    except Exception:
+        title = nameOpt
 
-    title = [nameDefault, "Spider", "Crawl"][nameOpt]
 
     # run the spider
     if spiderOpt == 1:
