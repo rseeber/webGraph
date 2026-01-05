@@ -219,7 +219,7 @@ def countUrls(links, urls):
 def robotsCheck(url):
     domain, resource = splitURL(url)
     rfp = rp.RobotFileParser()
-    rfp.set_url(domain+"/robots.txt")
+    rfp.set_url("http://"+domain+"/robots.txt")
     rfp.read()
 
     delay = rfp.crawl_delay(requestHeaders["User-Agent"])
