@@ -636,9 +636,12 @@ if __name__ == "__main__":
     if spiderOpt == 2 or spiderOpt == 3:
         G.load(title)
 
-    # resume spider
+    # resume spider (basically the same thing as start, just load the data first)
     if spiderOpt == 2:
-        pass
+        spiderDFS(startingNodes, maxDepth)
+        print("Saving data...")
+        G.save(title)
+        print("Saved!")
 
     # Save Graph to disk
     if spiderOpt == 1 or spiderOpt == 2:
