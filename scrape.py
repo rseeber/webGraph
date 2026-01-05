@@ -229,13 +229,22 @@ def robotsCheck(url):
 
     if domain not in robotCache:
         rfp = rp.RobotFileParser()
-        rfp.set_url("http://"+domain+"/robots.txt")
+
+        # use whatever protocol we were linked to the page with
+        if url.find("https://") != -1:
+            robotURL = "https://"+domain+"/robots.txt"
+        else:
+            robotURL = "http://"+domain+"/robots.txt"
+
+
+        rfp.set_url(robotURL)
         retry = 0
+        print(f"Fetching robots file {robotURL}")
         while(retry < 10):
             try:
                 rfp.read()
                 break
-            except:
+            except Exception:
                 retry += 1
                 print(f"Couldn't get robots file for {domain}. Waiting {5*retry} seconds...")
                 time.sleep(5 * retry)
@@ -473,7 +482,6 @@ def siteCheck(url):
 
 # visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
 def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
-    print(f"Depth: {depth}")
     # if this is our fist time on this node, add it to the graph
     if(u.color == "white"):
         G.V.append(u)
@@ -493,6 +501,9 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
         # So we keep it gray in order to denote the threshold 
         # of discovery.
         return
+
+    if not u.isAdjacentCached():
+            print(f"Depth: {depth}")
 
     # iterate through each of the adjacent nodes (shares an edge)
     for v in u.getAdjacent():

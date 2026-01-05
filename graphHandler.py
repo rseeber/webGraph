@@ -188,6 +188,10 @@ class Vertex:
         for url in urls:
             self.__adjacent.append(url)
 
+    # Returns True if we've already fetched the webpage for this node
+    def isAdjacentCached(self):
+        return self.__adjacent != None
+
     def getAdjacent(self):
         # If we haven't fetched the webpage and indexed URLs yet, do that.
         if self.__adjacent == None:
