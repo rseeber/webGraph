@@ -247,6 +247,8 @@ def robotsCheck(url):
             except Exception:
                 retry += 1
                 print(f"Couldn't get robots file for {domain}. Waiting {5*retry} seconds...")
+                if interrupt:
+                    break
                 time.sleep(5 * retry)
         else:
             print("Couldn't get resource. Skipping check.")
