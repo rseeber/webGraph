@@ -168,7 +168,7 @@ def addEdge(myEdge, edges):
         edges[myEdge]
         edges[myEdge] = edges[myEdge] + 1
     # otherwise, add it to the dict
-    except:
+    except Exception:
         edges[myEdge] = 1
 
 # deprecated in favor of countUrls()
@@ -517,7 +517,8 @@ def getTimestamp():
     return timestamp
 
 # This function is called when Ctrl+C is pressed
-def interrupt_handler():
+def interrupt_handler(sig, frame):
+    global interrupt
     interrupt = True
 
 
