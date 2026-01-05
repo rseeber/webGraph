@@ -13,7 +13,6 @@ import graphHandler as gh
 
 # Create an empty graph to start
 G = gh.Graph()
-G_domain = gh.Graph()
 
 # When set to true, the spider stops crawling deeper
 interrupt = False
@@ -493,10 +492,6 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
     # if this is our fist time on this node, add it to the graph
     if(u.color == "white"):
         G.V.append(u)
-        # also update the domain graph if this is a new domain
-        domain, resource = splitURL(u.url)
-        if(domain not in G_domain):
-            G_domain.V.append(gh.Vertex(domain))
 
     u.dist = depth
     u.color = "gray"
@@ -517,9 +512,6 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
     for v in u.getAdjacent():
         # Create the edge in the graph
         G.addEdge(gh.Edge(u, v))
-
-        # and in the domain graph
-        G_domain.addEdge_url(splitURL(u.url)[0], splitURL(v.url)[0])
 
         # Recursive Case
         ## we check unvisited nodes, as well as nodes who have "unoptimized" paths

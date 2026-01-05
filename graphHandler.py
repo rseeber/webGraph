@@ -90,7 +90,7 @@ class Graph:
             # append the url/title of the node to the list of nodes
             myJson["V"].append(v.url)
             # append the property dictionary to the list of node properties
-            props = {"color": v.color}
+            props = {"color": v.color, "dist": v.dist}
             myJson["V_props"].append(props)
 
             # create an empty entry for the node in the edge and edge prop lists
@@ -124,8 +124,12 @@ class Graph:
             url = myJson["V"][i]
             # create a vertex with that url, setting the current graph as the graph
             u = Vertex(url, self)
+            # PROPERTIES
             # set the color from "color" at index i in V_props
             u.color = myJson["V_props"][i]["color"]
+
+            # distance from starting node(s)
+            u.dist = myJson["V_props"][i]["dist"]
 
             # add the adjacent property
             edges = myJson["E"][url] # list
@@ -159,8 +163,8 @@ class Vertex:
     def __init__(self, url, G=None, GD=None):
         self.__adjacent = None
         self.__adjacentDomains = None
+        self.dist = None
         self.G = G
-        self.GD = GD    # Domain Graph
         self.color = "white"
         self.url = url
     
@@ -198,12 +202,6 @@ class Vertex:
             self.__fetchPage()
         return self.__adjacent
 
-    def getAdjacentDomains(self):
-        # If we haven't fetched the webpage and indexed URLs yet, do that.
-        if self.__adjacentDomains == None:
-            self.__fetchPage()
-        return self.__adjacentDomains
-    
     def __fetchPage(self):
         import scrape
 
@@ -238,25 +236,6 @@ class Vertex:
             urlsAdded.append(v.url)
 
 
-        # adjacent domains (for the domain graph)
-        self.__adjacentDomains = []
-        for domain in outdomains:
-            # This is some pretty godawful code, sorry
-
-            # See if the Domain Graph has this domain yet
-            # If it already exists, add the existing node to __adjacentDomains.
-            # Otherwise, create a new node.
-            #
-            # If GD is unset, just create a new node and don't check for uniqueness
-            try:
-                v = self.GD.get(domain)
-            except Exception:
-                v = None
-            # If this url doesn't have a node yet, create one
-            if v == None:
-                v = Vertex(domain, self.GD)
-            # Then add the node to the list of adjacent nodes
-            self.__adjacentDomains.append(v)
 
 # an edge pointing from u to v. Weight is a unit value (1) by default
 # while technically u and v are supposed to be Vertex type, you can also
