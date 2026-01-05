@@ -627,7 +627,7 @@ if __name__ == "__main__":
 
     # run the spider
     if spiderOpt == 1:
-        spiderDFS(startingNodes, 3)
+        spiderDFS(startingNodes, maxDepth)
         print("Saving data...")
         G.save(title)
         print("Saved!")
