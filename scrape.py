@@ -7,6 +7,7 @@ import json
 import networkx as nx
 import signal
 import sys
+import socket
 
 import graphHandler as gh
 
@@ -449,6 +450,11 @@ def spiderBetter(startUrls, N, data=Data(), j=0):
 def spiderDFS(startingNodes, maxDepth):
     global spider_started
     spider_started = True
+
+    # if it takes more than 30 seconds to grab something, honestly it deserves to
+    # just timeout at that point
+    socket.setdefaulttimeout(30) 
+
     # Assign all our "starting nodes" as unvisited
     for u in startingNodes:
         u.color = "white"
