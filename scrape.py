@@ -16,6 +16,7 @@ G_domain = gh.Graph()
 
 # When set to true, the spider stops crawling deeper
 interrupt = False
+spider_started = False
 
 class Data:
     # linkDict
@@ -405,6 +406,8 @@ def spiderBetter(startUrls, N, data=Data(), j=0):
 # spider using Depth-First Search algorithm, using Q as your starting nodes,
 # and crawling a maximum distance of `depth` from any of the starting nodes.
 def spiderDFS(startingNodes, maxDepth):
+    global spider_started
+    spider_started = True
     # Assign all our "starting nodes" as unvisited
     for u in startingNodes:
         u.color = "white"
@@ -423,6 +426,8 @@ def spiderDFS(startingNodes, maxDepth):
         # we can treat retracing our paths as having lower Big O time than the original
         # fetching of the webpage, which only happens once, even if we retrace the node.
         spiderDFS_visit(u, 0, maxDepth)
+        if interrupt:
+            break
 
 # returns true if you should fetch the site, false otherwise.
 # It's based on both the untrackedDomains, and (eventually) the robots.txt protocol
@@ -520,6 +525,8 @@ def getTimestamp():
 def interrupt_handler(sig, frame):
     global interrupt
     interrupt = True
+    if not spider_started:
+        exit()
 
 
 if __name__ == "__main__":
