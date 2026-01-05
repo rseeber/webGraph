@@ -439,7 +439,7 @@ def siteCheck(url):
 # visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
 def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
     print("=====================")
-    print("  Entering Depth: "+depth)
+    print(f"  Entering Depth: {depth}")
     print("=====================")
     # if this is our fist time on this node, add it to the graph
     if(u.color == "white"):
@@ -478,7 +478,7 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
                 break
             # visit the child node, incrementing the depth by 1
             spiderDFS_visit(v, depth + 1, maxDepth)
-            print("Returning to depth "+depth)
+            print(f"Returning to depth {depth}")
         # Base Case #2
         else:
             pass
@@ -487,6 +487,10 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
 # after having finished spiderDFS to a given depth, you can call spiderDFS_resume in order
 # to crawl to a deeper depth. Not intended to resume from a crash or outage.
 # Recall that G = (V, E)
+#
+# NOTE: this will have the effect of *resetting* depth of grey nodes to zero,
+# essentially restarting the crawl on them instead
+# to just start at your starting nodes, doing depth normally, call spiderDFS() normally
 def spiderDFS_resume(maxDepth):
     startingNodes = []
     for v in G.V:
@@ -518,71 +522,79 @@ def interrupt_handler():
 
 
 if __name__ == "__main__":
-    #urls = ["https://pluralistic.net/"]
-    #startUrls = ["https://pluralistic.net/2025/12/08/giant-teddybears/"]
-    startUrls = ["https://riverseeber.net/blog/", 
-                 "https://pluralistic.net/2025/12/08/giant-teddybears/",
-                 "https://smallweb.site/", "https://ribo.zone/"]
-    untrackedDomains = [
-        "google.com", "x.com", "twitter.com", "facebook.com", "reddit.com", 
-        "youtube.com", "amazon.com", "amazon.co.uk", "wikipedia.org",
-        "linkedin.com", "flickr.com", "11ty.dev", "archlinux.org", "stackoverflow.com",
-        "stackexchange.com", "superuser.com", "github.com", "archive.org",
-        "w3schools.com", "lifehacker.com", "instagram.com", "goodreads.com",
-        "bookshop.org", "openlibrary.org", "gutenburg.org", "torpublishinggroup.com",
-        "tiktok.com", "macmillan.com", "apple.com", "mozilla.org", "archive-it.org"
-    ]
+    # register interrupt_handler() to be called when pressing Ctrl+C
+    signal.signal(signal.SIGINT, interrupt_handler)
+
+    # load config.json
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    # initialize the values
+    startUrls = config["startUrls"]
+    untrackedDomains = config["untrackedDomains"]
+    maxDepth = config["maxDepth"]
+
     # Convert startUrls from str's Vertex's
     startingNodes = []
     for url in startUrls:
         startingNodes.append(gh.Vertex(url, G))
 
-    x = int(input("""What would you like to do?
+    # handle runtime options
+    spiderOpt = int(input("""What would you like to do?
     (1) Start the Spider
     (2) Resume the spider
     (3) Load the most recent graph and analyze it
 > """))
 
-    choice = int(input("""Analyze which graphs?
+    analysisOpt = int(input("""Analyze which graphs?
     (1) Page Graph
     (2) Domain Graph
     (3) Both    
     (4) Neither
 > """))
 
+    nameDefault = config["nameDefault"]
+    nameOpt = input(f"What is this crawl called (or what crawl are we loading)?\n(0)=\033[1;4m{nameDefault}\033[m, (1)=Spider, (2)=Crawl\n> ")
+    # handle default value
+    if nameOpt == "":
+        nameOpt = 0
+    nameOpt = int(nameOpt)
+
+    title = [nameDefault, "Spider", "Crawl"][nameOpt]
+
     # run the spider
-    if x <= 1:
+    if spiderOpt == 1:
         spiderDFS(startingNodes, 3)
-        G.save("graph")
+        G.save(title)
     
+    #load from disk
+    if spiderOpt == 2 or spiderOpt == 3:
+        G.load(title)
+
     # resume spider
-    if x == 2:
+    if spiderOpt == 2:
         pass
 
     # Save Graph to disk
-    if x <= 2:
+    if spiderOpt == 1 or spiderOpt == 2:
         pass
 
     # analysis
-    if x <= 3:
+    if spiderOpt <= 3:
 
 
-        #load from disk
-        if x == 3:
-            G.load("graph")
 
         timestamp = getTimestamp()
         
-        if choice == 1 or choice == 3:
+        if analysisOpt == 1 or analysisOpt == 3:
             print("PAGE GRAPH")
             G.printGraphSize()
 
             # Then convert to nx.Graph
             g = gh.graphToNxGraph(G)
             print("DRAWING...")    
-            gh.drawGraph(g, f"output/pageGraph__{timestamp}.jpg")
+            gh.drawGraph(g, f"output/{title}_pageGraph__{timestamp}.jpg")
         
-        if choice == 2 or choice == 3:
+        if analysisOpt == 2 or analysisOpt == 3:
             # Convert page Graph into one representing domains only
             print("DOMAIN GRAPH")
             DomainGraph = gh.graphToDomainGraph(G)
@@ -591,4 +603,4 @@ if __name__ == "__main__":
             # to nx.Graph
             g_domain = gh.graphToNxGraph(DomainGraph)
             print("DRAWING...")
-            gh.drawGraph(g_domain, f"output/domainGraph__{timestamp}.jpg")
+            gh.drawGraph(g_domain, f"output/{title}_domainGraph__{timestamp}.jpg")
