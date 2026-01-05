@@ -109,7 +109,7 @@ def parseWebpage(pageURL):
     getDomain, getResource = splitURL(pageURL)
     retry = 0
     while(retry < 3):
-        print("\nFetching resource: "+pageURL)
+        print("Fetching resource: "+pageURL)
         try:
             delay = 5 * retry + 1
             print("Waiting "+str(delay)+" seconds...")
@@ -428,6 +428,7 @@ def spiderDFS(startingNodes, maxDepth):
         spiderDFS_visit(u, 0, maxDepth)
         if interrupt:
             break
+    spider_started = False
 
 # returns true if you should fetch the site, false otherwise.
 # It's based on both the untrackedDomains, and (eventually) the robots.txt protocol
@@ -443,9 +444,7 @@ def siteCheck(url):
 
 # visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
 def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
-    print("=====================")
-    print(f"  Entering Depth: {depth}")
-    print("=====================")
+    print(f"Depth: {depth}")
     # if this is our fist time on this node, add it to the graph
     if(u.color == "white"):
         G.V.append(u)
@@ -572,7 +571,9 @@ if __name__ == "__main__":
     # run the spider
     if spiderOpt == 1:
         spiderDFS(startingNodes, 3)
+        print("Saving data...")
         G.save(title)
+        print("Saved!")
     
     #load from disk
     if spiderOpt == 2 or spiderOpt == 3:
