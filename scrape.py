@@ -5,8 +5,17 @@ import time
 import urllib.robotparser as rp
 import json
 import networkx as nx
+import signal
+import sys
 
 import graphHandler as gh
+
+# Create an empty graph to start
+G = gh.Graph()
+G_domain = gh.Graph()
+
+# When set to true, the spider stops crawling deeper
+interrupt = False
 
 class Data:
     # linkDict
@@ -88,6 +97,10 @@ def standardizeLink(link, getDomain):
     # ensure all links end with "/"
     if(link[-1] != "/"):
         link = link + "/"
+
+    # Don't interact with onion links (they don't resolve properly over DNS anyways)
+    if (splitURL(link)[0].endswith(".onion")):
+        return None
     
     return link
 
@@ -195,7 +208,7 @@ def countUrls(links, urls):
         # go through each untracked domain
         for u in untrackedDomains:
             # if our domain is a subdomain of the untracked domains, ignore it
-            if u in domain:
+            if domain.endswith(u):
                 track = False
         # otherwise, add it
         if(track):
@@ -425,6 +438,9 @@ def siteCheck(url):
 
 # visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
 def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
+    print("=====================")
+    print("  Entering Depth: "+depth)
+    print("=====================")
     # if this is our fist time on this node, add it to the graph
     if(u.color == "white"):
         G.V.append(u)
@@ -457,8 +473,12 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
         ## we check unvisited nodes, as well as nodes who have "unoptimized" paths
         ## (see my explanation inside spiderDFS())
         if (v.color == "white") or (v.dist > u.dist + 1):
+            # Stop going deeper if we've been told to stop
+            if interrupt:
+                break
             # visit the child node, incrementing the depth by 1
             spiderDFS_visit(v, depth + 1, maxDepth)
+            print("Returning to depth "+depth)
         # Base Case #2
         else:
             pass
@@ -486,36 +506,49 @@ def spiderDFS_init(startingNodes, maxDepth):
 robotsTxt = {}
 requestHeaders = {"User-Agent":"WebGraphUtility", "From":"riverseeber12@gmail.com"}
 
-# Create an empty graph to start
-G = gh.Graph()
-G_domain = gh.Graph()
 
 def getTimestamp():
     dt = datetime.datetime.now()
     timestamp = f"{str(dt.year)}-{str(dt.month)}-{str(dt.day)}_{str(dt.hour)}-{str(dt.minute)}-{str(dt.second)}"
     return timestamp
 
+# This function is called when Ctrl+C is pressed
+def interrupt_handler():
+    interrupt = True
+
+
 if __name__ == "__main__":
     #urls = ["https://pluralistic.net/"]
     #startUrls = ["https://pluralistic.net/2025/12/08/giant-teddybears/"]
-    startUrls = ["https://riverseeber.net/"]
+    startUrls = ["https://riverseeber.net/blog/", 
+                 "https://pluralistic.net/2025/12/08/giant-teddybears/",
+                 "https://smallweb.site/", "https://ribo.zone/"]
     untrackedDomains = [
         "google.com", "x.com", "twitter.com", "facebook.com", "reddit.com", 
         "youtube.com", "amazon.com", "amazon.co.uk", "wikipedia.org",
-        "linkedin.com", "flickr.com", "11ty.dev"
+        "linkedin.com", "flickr.com", "11ty.dev", "archlinux.org", "stackoverflow.com",
+        "stackexchange.com", "superuser.com", "github.com", "archive.org",
+        "w3schools.com", "lifehacker.com", "instagram.com", "goodreads.com",
+        "bookshop.org", "openlibrary.org", "gutenburg.org", "torpublishinggroup.com",
+        "tiktok.com", "macmillan.com", "apple.com", "mozilla.org", "archive-it.org"
     ]
     # Convert startUrls from str's Vertex's
     startingNodes = []
     for url in startUrls:
         startingNodes.append(gh.Vertex(url, G))
 
-    x = input("""What would you like to do?
+    x = int(input("""What would you like to do?
     (1) Start the Spider
     (2) Resume the spider
     (3) Load the most recent graph and analyze it
-> """)
+> """))
 
-    x = int(x)
+    choice = int(input("""Analyze which graphs?
+    (1) Page Graph
+    (2) Domain Graph
+    (3) Both    
+    (4) Neither
+> """))
 
     # run the spider
     if x <= 1:
@@ -532,22 +565,30 @@ if __name__ == "__main__":
 
     # analysis
     if x <= 3:
+
+
         #load from disk
         if x == 3:
             G.load("graph")
 
-
-        G.printGraphSize()
         timestamp = getTimestamp()
+        
+        if choice == 1 or choice == 3:
+            print("PAGE GRAPH")
+            G.printGraphSize()
 
-        # Then convert to nx.Graph
-        print("PAGE GRAPH")
-        g = gh.graphToNxGraph(G)
-            
-        gh.drawGraph(g, f"output/pageGraph__{timestamp}.jpg")
+            # Then convert to nx.Graph
+            g = gh.graphToNxGraph(G)
+            print("DRAWING...")    
+            gh.drawGraph(g, f"output/pageGraph__{timestamp}.jpg")
+        
+        if choice == 2 or choice == 3:
+            # Convert page Graph into one representing domains only
+            print("DOMAIN GRAPH")
+            DomainGraph = gh.graphToDomainGraph(G)
+            DomainGraph.printGraphSize()
 
-        # Convert page Graph into one representing domains only
-        print("DOMAIN GRAPH")
-        DomainGraph = gh.graphToDomainGraph(G)
-        g_domain = gh.graphToNxGraph(DomainGraph)
-        gh.drawGraph(g_domain, f"output/domainGraph__{timestamp}.jpg")
+            # to nx.Graph
+            g_domain = gh.graphToNxGraph(DomainGraph)
+            print("DRAWING...")
+            gh.drawGraph(g_domain, f"output/domainGraph__{timestamp}.jpg")

@@ -287,7 +287,7 @@ def graphToDomainGraph(G: Graph):
         # grab the domain only
         domain = scrape.splitURL(v.url)[0]
         # if the domain is not already in the list, add it
-        if domain not in GG_domain.V:
+        if GG_domain.get(domain) == None:
             GG_domain.V.append(Vertex(domain))
     
     # go through the edges
@@ -306,8 +306,8 @@ def graphToDomainGraph(G: Graph):
 
 # Draw the graph, with the labels raised slightly above the nodes
 def drawGraph(G: nx.DiGraph, output):
-    plt.figure(figsize=(30, 30))
-    pos_nodes = nx.spring_layout(G, weight="weight", k=2.0)
+    plt.figure(figsize=(100, 75))
+    pos_nodes = nx.spring_layout(G, weight="weight", k=None)
     #pos_nodes = nx.spectral_layout(G)
     #pos_nodes = nx.shell_layout(G)
     #pos_nodes = nx.spectral_layout(G)
@@ -319,7 +319,7 @@ def drawGraph(G: nx.DiGraph, output):
 
     pos_attrs = {}
     for node, coords in pos_nodes.items():
-        pos_attrs[node] = (coords[0], coords[1] + 0.02)
+        pos_attrs[node] = (coords[0], coords[1] + 0.004)
 
     node_attrs = nx.get_node_attributes(G, 'type')
     custom_node_attrs = {}
