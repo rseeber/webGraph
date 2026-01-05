@@ -18,6 +18,8 @@ G_domain = gh.Graph()
 interrupt = False
 spider_started = False
 
+robotCache = {}
+
 class Data:
     # linkDict
     # >>> {
@@ -108,13 +110,18 @@ def standardizeLink(link, getDomain):
 def parseWebpage(pageURL):
     getDomain, getResource = splitURL(pageURL)
     retry = 0
+    baseDelay = robotsCheck(pageURL)[1]
+    # even if they didn't specifically mention a delay in their robots.txt,
+    # let's be courtieous and wait 0.5 seconds between requests
+    if baseDelay == 0:
+        baseDelay = 0.5
     while(retry < 3):
         print("Fetching resource: "+pageURL)
+        delay = 5 * retry + baseDelay
+        print("Waiting "+str(delay)+" seconds...")
+        # 1, 6, 11, 16 seconds, etc
+        time.sleep(delay)
         try:
-            delay = 5 * retry + 1
-            print("Waiting "+str(delay)+" seconds...")
-            # 1, 6, 11, 16 seconds, etc
-            time.sleep(delay)
             reqs = requests.get(pageURL, headers=requestHeaders)
             soup = BeautifulSoup(reqs.text, 'html.parser')
             break
@@ -218,17 +225,40 @@ def countUrls(links, urls):
 # returns True if the url is allowed to be scraped
 def robotsCheck(url):
     domain, resource = splitURL(url)
-    rfp = rp.RobotFileParser()
-    rfp.set_url("http://"+domain+"/robots.txt")
-    rfp.read()
+    global robotCache
 
-    delay = rfp.crawl_delay(requestHeaders["User-Agent"])
+    if domain not in robotCache:
+        rfp = rp.RobotFileParser()
+        rfp.set_url("http://"+domain+"/robots.txt")
+        retry = 0
+        while(retry < 10):
+            try:
+                rfp.read()
+                break
+            except:
+                retry += 1
+                print(f"Couldn't get robots file for {domain}. Waiting {5*retry} seconds...")
+                time.sleep(5 * retry)
+        else:
+            print("Couldn't get resource. Skipping check.")
+            return True, 0
 
-    allowed = rfp.can_fetch(requestHeaders["User-Agent"], url)
 
-    if allowed == None:
-        allowed = rfp.can_fetch("*", url)
-    
+        delay = rfp.crawl_delay(requestHeaders["User-Agent"])
+        if delay == None:
+            delay = 0
+
+        allowed = rfp.can_fetch(requestHeaders["User-Agent"], url)
+        if allowed == None:
+            allowed = rfp.can_fetch("*", url)
+        
+        # save to cache
+        robotCache.update({domain: [allowed, delay]})
+    else:
+        # load from cache
+        allowed = robotCache[domain][0]
+        delay = robotCache[domain][1]
+
     return allowed, delay
 
 # depricated in favor of just using a library (wrapped up inside of robotsCheck())
@@ -428,7 +458,6 @@ def spiderDFS(startingNodes, maxDepth):
         spiderDFS_visit(u, 0, maxDepth)
         if interrupt:
             break
-    spider_started = False
 
 # returns true if you should fetch the site, false otherwise.
 # It's based on both the untrackedDomains, and (eventually) the robots.txt protocol
@@ -482,7 +511,6 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
                 break
             # visit the child node, incrementing the depth by 1
             spiderDFS_visit(v, depth + 1, maxDepth)
-            print(f"Returning to depth {depth}")
         # Base Case #2
         else:
             pass
@@ -523,9 +551,15 @@ def getTimestamp():
 # This function is called when Ctrl+C is pressed
 def interrupt_handler(sig, frame):
     global interrupt
-    interrupt = True
-    if not spider_started:
+    # On the first interrupt, close gracefully
+    # If the spider hasn't started, just close (nothing started yet)
+    if not interrupt and spider_started:
+        print("\nINTERRUPT SIGNAL RECIEVED: Closing gracefully...")
+        print("(to force quit, send the interrupt again)")
+    else:
         exit()
+    # To keep track of if this is the first interrupt
+    interrupt = True
 
 
 if __name__ == "__main__":
