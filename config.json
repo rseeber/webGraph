@@ -1,0 +1,23 @@
+{
+    "maxDepth": 3,
+
+    "nameDefault": "Graph",
+
+    "startUrls" : [
+        "https://riverseeber.net/blog/", 
+        "https://pluralistic.net/2025/12/08/giant-teddybears/",
+        "https://smallweb.site/", 
+        "https://ribo.zone/"
+    ],
+
+    "untrackedDomains" : [
+        "google.com", "x.com", "twitter.com", "facebook.com", "reddit.com", 
+        "youtube.com", "amazon.com", "amazon.co.uk", "wikipedia.org",
+        "linkedin.com", "flickr.com", "11ty.dev", "archlinux.org", "stackoverflow.com",
+        "stackexchange.com", "superuser.com", "github.com", "archive.org",
+        "w3schools.com", "lifehacker.com", "instagram.com", "goodreads.com",
+        "bookshop.org", "openlibrary.org", "gutenburg.org", "torpublishinggroup.com",
+        "tiktok.com", "macmillan.com", "apple.com", "mozilla.org", "archive-it.org"
+    ]
+
+}
