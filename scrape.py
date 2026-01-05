@@ -490,43 +490,6 @@ requestHeaders = {"User-Agent":"WebGraphUtility", "From":"riverseeber12@gmail.co
 G = gh.Graph()
 G_domain = gh.Graph()
 
-# Convert a gh.Graph to nx.Graph
-def graphToNxGraph(G: gh.Graph):
-    g = nx.DiGraph()
-
-    # Add the nodes/vertices
-    for v in G.V:
-        g.add_node(v)
-
-    # Add the edges
-    for e in G.E:
-        g.add_edge(e.u, e.v, weight=e.weight)
-    
-    return g
-
-def graphToDomainGraph(G: gh.Graph):
-    GG_domain = gh.Graph()
-
-    # go through each vertex in the original graph
-    for v in G.V:
-        # grab the domain only
-        domain = splitURL(v.url)[0]
-        # if the domain is not already in the list, add it
-        if domain not in GG_domain.V:
-            GG_domain.V.append(gh.Vertex(domain))
-    
-    # go through the edges
-    for e in G.E:
-        # grab the domain of u
-        u_domain = splitURL(e.u.url)[0]
-        # grab the domain of v
-        v_domain = splitURL(e.v.url)[0]
-
-        # add the edge (this func increments weight if it already exists)
-        GG_domain.addEdge_url(u_domain, v_domain)
-
-    return GG_domain
-
 def getTimestamp():
     dt = datetime.datetime.now()
     timestamp = f"{str(dt.year)}-{str(dt.month)}-{str(dt.day)}_{str(dt.hour)}-{str(dt.minute)}-{str(dt.second)}"
@@ -557,7 +520,7 @@ if __name__ == "__main__":
     # run the spider
     if x <= 1:
         spiderDFS(startingNodes, 3)
-        G.saveToFile("graph")
+        G.save("graph")
     
     # resume spider
     if x == 2:
@@ -571,7 +534,7 @@ if __name__ == "__main__":
     if x <= 3:
         #load from disk
         if x == 3:
-            G.loadFromFile("graph")
+            G.load("graph")
 
 
         G.printGraphSize()
@@ -579,12 +542,12 @@ if __name__ == "__main__":
 
         # Then convert to nx.Graph
         print("PAGE GRAPH")
-        g = graphToNxGraph(G)
+        g = gh.graphToNxGraph(G)
             
         gh.drawGraph(g, f"output/pageGraph__{timestamp}.jpg")
 
         # Convert page Graph into one representing domains only
         print("DOMAIN GRAPH")
-        DomainGraph = graphToDomainGraph(G)
-        g_domain = graphToNxGraph(DomainGraph)
+        DomainGraph = gh.graphToDomainGraph(G)
+        g_domain = gh.graphToNxGraph(DomainGraph)
         gh.drawGraph(g_domain, f"output/domainGraph__{timestamp}.jpg")

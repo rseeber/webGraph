@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import pickle
 import shutil
+import json
 
 # Classes
 
@@ -43,39 +44,116 @@ class Graph:
           
 
     # adds the edge if it doesn't exist, or else increments the weight
-    def addEdge(self, myEdge):
+    # if you specify addWeight, it can add the same edge that many times
+    # ex: addWeight=7 means add that edge 7 times, instead of having to
+    # call the function multiple times
+    def addEdge(self, myEdge, addWeight=1):
         # look for if the edge already exists
         for e in self.E:
             # if it does, increment the weight
             if e.u == myEdge.u and e.v == myEdge.v:
-                e.weight += 1
+                e.weight += addWeight
                 return
         # otherwise, add it to the list
         self.E.append(myEdge)
 
     # Function overload that takes urls instead of an Edge object
     # adds the edge if it doesn't exist, or else increments the weight
-    def addEdge_url(self, u_url, v_url):
+    def addEdge_url(self, u_url, v_url, addWeight=1):
         myEdge = Edge(Vertex(u_url), Vertex(v_url))
-        self.addEdge(myEdge)
+        self.addEdge(myEdge, addWeight)
 
     def printGraphSize(self):
         print(f"Graph Size:\n\tNodes: {len(self.V)}\n\tEdges: {len(self.E)}")
 
 
-    def saveToFile(self, title):
-        import scrape
-        filename = f"output/{title}__{scrape.getTimestamp()}.pickle"
-        with open(filename, "wb") as f:
-            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
-        
-        # duplicate the file to a mostRecent file
-        shutil.copy(filename, f"output/{title}__mostRecent.pickle")
+    def exportJson(self):
+        # Saves the Graph data structure to a Python Dict ("json")
+        # This is just so we can write to disk. 
+        # In order to handle the data, we must import the Json again so lookups are possible
+        myJson = {
+            "V": [],
+            "V_props": [],  #ex: [{"color": "black"}, ...]
+            # Note: the adjacent property is stored in the edges, so doesn't need to be
+            # stored in V_props
 
-    # THIS WILL COMPLETELY OVERWRITE EXISTING MEMORY DATA
-    def loadFromFile(self, title):
-        with open(f"output/{title}__mostRecent.pickle", "rb") as f:
-            self = pickle.load(f)
+            # We're using an adjacency list for this storage method.
+            # See "Introdction to Algorithms 3e" by Cormen pg 590 (Ch 22) for more
+            "E": {}, #ex: {"a": ["j", "k", "l"], "b": ["x", "y", "z"], ...}
+            # props are matched to index:   "a, j"      "a, k"          "a, l"              "b, x"
+            "E_props": {} #ex: {"a": [{"weight": 5}, {"weight": 7}, {"weight": 1}], "b": [{"weight": 2}, ...], ...}
+            # Notice that all keys are hashable (strings), even though the values are more complex.
+            # this makes lookups easy and possible.
+        }
+        # Index the nodes
+        for v in self.V:
+            # append the url/title of the node to the list of nodes
+            myJson["V"].append(v.url)
+            # append the property dictionary to the list of node properties
+            props = {"color": v.color}
+            myJson["V_props"].append(props)
+
+            # create an empty entry for the node in the edge and edge prop lists
+            myJson["E"].update({v.url: []})
+            myJson["E_props"].update({v.url: []})
+
+        
+        # Index the edges
+        for e in self.E:
+            # add the edges
+            myJson["E"][e.u.url].append(e.v.url)
+            # add the edge properties
+            myJson["E_props"][e.u.url].append({"weight": e.weight})
+
+        return myJson
+
+    # Load data with the given title into the Graph
+    def load(self, title):
+        with open(f"output/{title}.json") as f:
+            myJson = json.load(f)
+            self.loadFromJson(myJson)
+
+    # given a json-like python dict, load the data into the Graph
+    def loadFromJson(self, myJson):
+        if type(myJson) != dict:
+            print("ERROR: loadFromJson() requires a python dict as input, not "+type(myJson))
+            return
+        # iterate through list of nodes
+        for i in range(len(myJson["V"])):
+            # grab the url at index i
+            url = myJson["V"][i]
+            # create a vertex with that url, setting the current graph as the graph
+            u = Vertex(url, self)
+            # set the color from "color" at index i in V_props
+            u.color = myJson["V_props"][i]["color"]
+
+            # add the adjacent property
+            edges = myJson["E"][url] # list
+            u.setAdjacent(edges)
+
+            # save the edge to the graph
+            self.V.append(u)
+
+            # iterate through the adjacency list for u
+            for j in range(len(edges)):
+                v_url = edges[j]
+                # get the weight
+                edgeWeight = myJson["E_props"][url][j]["weight"]
+                # create the Edge object
+                # Notice that we're creating the edge using urls (str) not Vertex
+                #myEdge = Edge(u.url, v_url, weight=edgeWeight)
+
+                # add the edge to the Graph
+                self.addEdge_url(u.url, v_url, edgeWeight)
+
+                #self.E.append(myEdge)
+            
+    # save current Graph data to a json file, filename starting with title
+    def save(self, title):
+        import scrape
+        myJson = self.exportJson()
+        with open(f"output/{title}.json", "w") as f:
+            json.dump(myJson, f, indent=4)
 
 class Vertex:
     def __init__(self, url, G=None, GD=None):
@@ -98,6 +176,17 @@ class Vertex:
             return self.url == v.url
         return False
         
+    def setAdjacent(self, urls: list):
+        # In case this ever gets called when it shouldn't be
+        if self.__adjacent != None:
+            print("Vertex.setAdjacent(): WARNING: non-empty contents of __adjacent being overwritten! len = "+len(self.__adjacent))
+        
+        # wipe the list
+        self.__adjacent = []
+
+        # iterate through each item in the list, append it to __adjacent
+        for url in urls:
+            self.__adjacent.append(url)
 
     def getAdjacent(self):
         # If we haven't fetched the webpage and indexed URLs yet, do that.
@@ -164,6 +253,8 @@ class Vertex:
             self.__adjacentDomains.append(v)
 
 # an edge pointing from u to v. Weight is a unit value (1) by default
+# while technically u and v are supposed to be Vertex type, you can also
+# pass in just a string (url/title), and everything still works
 class Edge:
     def __init__(self, u: Vertex, v:Vertex, weight=1):
         self.u = u
@@ -172,7 +263,44 @@ class Edge:
     def __hash__(self):
         return hash(str(hash(self.u)) + str(hash(self.v)))
 
+import scrape
 
+# Convert a gh.Graph to nx.Graph
+def graphToNxGraph(G: Graph):
+    g = nx.DiGraph()
+
+    # Add the nodes/vertices
+    for v in G.V:
+        g.add_node(v)
+
+    # Add the edges
+    for e in G.E:
+        g.add_edge(e.u, e.v, weight=e.weight)
+    
+    return g
+
+def graphToDomainGraph(G: Graph):
+    GG_domain = Graph()
+
+    # go through each vertex in the original graph
+    for v in G.V:
+        # grab the domain only
+        domain = scrape.splitURL(v.url)[0]
+        # if the domain is not already in the list, add it
+        if domain not in GG_domain.V:
+            GG_domain.V.append(Vertex(domain))
+    
+    # go through the edges
+    for e in G.E:
+        # grab the domain of u
+        u_domain = scrape.splitURL(e.u.url)[0]
+        # grab the domain of v
+        v_domain = scrape.splitURL(e.v.url)[0]
+
+        # add the edge (this func increments weight if it already exists)
+        GG_domain.addEdge_url(u_domain, v_domain)
+
+    return GG_domain
 
 # Funcs
 
@@ -206,6 +334,9 @@ def drawGraph(G: nx.DiGraph, output):
 def drawGraph_simple(G: nx.DiGraph, output):
     nx.draw_networkx(G, with_labels=False)
     plt.savefig(output)
+
+
+# Main()
 
 if __name__ == "__main__":
     # Create an empty graph
