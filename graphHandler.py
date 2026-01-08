@@ -231,7 +231,7 @@ class Vertex:
 
         for url in inlinks+outlinks:
             # If this url doesn't have a node yet, create one
-            v = self.G.get(url)
+            v = self.G.getVertex(url)
             if v == None:
                 v = Vertex(url, self.G)
 
