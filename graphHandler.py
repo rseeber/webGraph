@@ -28,7 +28,7 @@ class Graph:
             return False
 
     # Returns a vertex with the same url as the element, or else returns None
-    def get(self, element):
+    def getVertex(self, element):
         # Vertex
         # if it's a string, create a new vertex with that url value
         if type(element) == str:
@@ -41,7 +41,18 @@ class Graph:
                     return v
             # otherwise, it does not contain it
             return None
-          
+    
+    # add a Vertex with the given url, unless it already exists
+    def addVertex_url(self, url, dist=None):
+        for u in self.V:
+            # if the vertex is already there
+            if u.url == url:
+                # update the dist if a shorter path was found
+                if dist != None and dist < u.dist:
+                    u.dist = dist
+                return
+        # if it's new, add it
+        self.V.append(Vertex(url, G))
 
     # adds the edge if it doesn't exist, or else increments the weight
     # if you specify addWeight, it can add the same edge that many times
@@ -248,7 +259,6 @@ class Edge:
     def __hash__(self):
         return hash(str(hash(self.u)) + str(hash(self.v)))
 
-import scrape
 
 # Convert a gh.Graph to nx.Graph
 def graphToNxGraph(G: Graph):
@@ -272,7 +282,7 @@ def graphToDomainGraph(G: Graph):
         # grab the domain only
         domain = scrape.splitURL(v.url)[0]
         # if the domain is not already in the list, add it
-        if GG_domain.get(domain) == None:
+        if GG_domain.getVertex(domain) == None:
             GG_domain.V.append(Vertex(domain))
     
     # go through the edges

@@ -20,6 +20,8 @@ spider_started = False
 
 robotCache = {}
 
+global lastSaved
+
 class Data:
     # linkDict
     # >>> {
@@ -144,6 +146,8 @@ def parseWebpage(pageURL):
         # ignore broken or missing links
         if link == None:
             continue
+        if link == "":
+            continue
         # standardize it
         link = standardizeLink(link, getDomain) 
         # input validation
@@ -164,6 +168,7 @@ def parseWebpage(pageURL):
     
     return inlinks, outlinks, outdomains
 
+# Depricated.
 # adds the edge if it is unique, or else increments the counter
 def addEdge(myEdge, edges):
     # myEdge
@@ -306,7 +311,7 @@ def getRobotsTxt(domain):
     
 
     
-
+# Depricated.
 # Given a list of urls to start with, it calls parseWebpage() on each. Then, it recursively goes through each of *those*.
 # The function continues until it has found and saved all links N degrees or less from each provided url.
 # In order to continue crawling at a higher degree, simply provide the returned data object.
@@ -399,6 +404,7 @@ def spider(startUrls, N, untrackedDomains, data=Data(), i=0):
     k = 10
     return spider(urls, N-1, untrackedDomains, data, i+1)
 
+# Depricated.
 def spiderBetter(startUrls, N, data=Data(), j=0):
     if(j == 0):
         data.linkDict = {}
@@ -449,6 +455,10 @@ def spiderBetter(startUrls, N, data=Data(), j=0):
 def spiderDFS(startingNodes, maxDepth):
     global spider_started
     spider_started = True
+
+    global lastSaved
+    lastSaved = time.monotonic()
+
 
     # if it takes more than 30 seconds to grab something, honestly it deserves to
     # just timeout at that point
@@ -527,6 +537,21 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
             pass
     u.color = "black"
 
+    # Save to disk if it's been a while
+    global lastSaved
+    now = time.monotonic()
+    if now - lastSaved >= (10):   # 10 minutes
+        print("Automatically saving backup to disk...")
+        # This probably deserves proper error handling at some point
+        try:
+            G.save(f"temp/{title}_backup__{getTimestamp()}")
+            print("Backup saved! Resuming crawl...")
+        except Exception as err:
+            print("WARNING: backup failed! See below:")
+            print(err)
+        lastSaved = now
+
+
 # after having finished spiderDFS to a given depth, you can call spiderDFS_resume in order
 # to crawl to a deeper depth. Not intended to resume from a crash or outage.
 # Recall that G = (V, E)
@@ -604,6 +629,7 @@ if __name__ == "__main__":
     (4) Neither
 > """))
 
+    global title
     nameDefault = config["nameDefault"]
     nameOpt = input(f"What is this crawl called (or what crawl are we loading)?\n(0)=\033[1;4m{nameDefault}\033[m, (1)=Spider, (2)=Crawl\n> ")
     # handle default value
@@ -626,7 +652,9 @@ if __name__ == "__main__":
     
     #load from disk
     if spiderOpt == 2 or spiderOpt == 3:
+        print("Loading from disk...")
         G.load(title)
+        print("Successfully loaded graph!")
 
     # resume spider (basically the same thing as start, just load the data first)
     if spiderOpt == 2:
