@@ -78,8 +78,12 @@ def splitDomain(domain):
 
 # fix local links, remove queries, end with a "/"
 def standardizeLink(link, getDomain):
-    # remove "mailto:" links
-    if("mailto:" in link):
+    # Remove non-str input BEFORE other checks
+    if (type(link) != str):
+        return None
+
+    # remove "mailto:" links and empty input
+    if("mailto:" in link or len(link) == 0):
         return None
 
     # convert local links to regular links
@@ -100,7 +104,7 @@ def standardizeLink(link, getDomain):
     
     
     # ensure all links end with "/"
-    if(link[-1] != "/"):
+    if(not link.endswith("/")):
         link = link + "/"
 
     # Don't interact with onion links (they don't resolve properly over DNS anyways)
@@ -540,7 +544,7 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
     # Save to disk if it's been a while
     global lastSaved
     now = time.monotonic()
-    if now - lastSaved >= (10):   # 10 minutes
+    if now - lastSaved >= (10 * 60):   # 10 minutes
         print("Automatically saving backup to disk...")
         # This probably deserves proper error handling at some point
         try:
