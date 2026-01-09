@@ -254,10 +254,12 @@ def robotsCheck(url):
                 break
             except Exception:
                 retry += 1
-                logger.write(f"Couldn't get robots file for {domain}. Waiting {5*retry} seconds...")
                 if interrupt:
                     break
-                time.sleep(5 * retry)
+                # Don't sleep on the last loop
+                if retry < 3:
+                    logger.write(f"Couldn't get robots file for {domain}. Waiting {5} seconds...")
+                    time.sleep(5)
         else:
             logger.write("Couldn't get resource. Skipping check.")
             allowed = True
