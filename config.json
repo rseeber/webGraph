@@ -1,12 +1,13 @@
 {
-    "maxDepth": 3,
+    "maxDepth": 4,
 
-    "nameDefault": "Graph",
+    "nameDefault": "IndiewebGraph-Depth-4",
 
     "startUrls" : [
-        "https://riverseeber.net/blog/", 
+	"https://www.hazelthayer.com/",
         "https://smallweb.site/", 
-        "https://ribo.zone/"
+        "https://ribo.zone/",
+        "https://riverseeber.net/blog/"
     ],
 
     "untrackedDomains" : [
@@ -17,7 +18,7 @@
         "w3schools.com", "lifehacker.com", "instagram.com", "goodreads.com",
         "bookshop.org", "openlibrary.org", "gutenburg.org", "torpublishinggroup.com",
         "tiktok.com", "macmillan.com", "apple.com", "mozilla.org", "archive-it.org", 
-        "githubstatus.com"
+        "githubstatus.com", "patreon.com", "bitly.com"
     ]
 
 }
