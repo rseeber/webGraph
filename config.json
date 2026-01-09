@@ -6,10 +6,10 @@
     "nameDefault": "IndiewebGraph-Depth-4",
 
     "startUrls" : [
-	"https://www.hazelthayer.com/",
+        "https://riverseeber.net/blog/",
+	    "https://www.hazelthayer.com/",
         "https://smallweb.site/", 
-        "https://ribo.zone/",
-        "https://riverseeber.net/blog/"
+        "https://ribo.zone/"
     ],
 
     "untrackedDomains" : [

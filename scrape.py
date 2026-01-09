@@ -248,7 +248,7 @@ def robotsCheck(url):
         rfp.set_url(robotURL)
         retry = 0
         logger.write(f"Fetching robots file {robotURL}")
-        while(retry < 10):
+        while(retry < 3):
             try:
                 rfp.read()
                 break
@@ -499,6 +499,7 @@ def siteCheck(url):
     for d in untrackedDomains:
         if d in url:
             track = False
+            break
 
     # put a robots.txt check here eventually
     
@@ -507,7 +508,7 @@ def siteCheck(url):
 # visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
 def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
     # if this is our fist time on this node, add it to the graph
-    if(u.color == "white"):
+    if(G.getVertex(u) == None):
         G.V.append(u)
 
     u.dist = depth
@@ -527,6 +528,10 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
 
     # iterate through each of the adjacent nodes (shares an edge)
     for v in u.getAdjacent():
+        # create the corresponding node, unless it already exists
+        # (that's how this func works)
+        v = G.addVertex_url(v)
+
         # Create the edge in the graph
         G.addEdge(gh.Edge(u, v))
 

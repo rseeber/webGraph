@@ -52,9 +52,11 @@ class Graph:
                 # update the dist if a shorter path was found
                 if dist != None and dist < u.dist:
                     u.dist = dist
-                return
+                return u
         # if it's new, add it
-        self.V.append(Vertex(url, G))
+        u = Vertex(url, self)
+        self.V.append(u)
+        return u
 
     # adds the edge if it doesn't exist, or else increments the weight
     # if you specify addWeight, it can add the same edge that many times
@@ -73,7 +75,14 @@ class Graph:
     # Function overload that takes urls instead of an Edge object
     # adds the edge if it doesn't exist, or else increments the weight
     def addEdge_url(self, u_url, v_url, addWeight=1):
-        myEdge = Edge(Vertex(u_url), Vertex(v_url))
+        # check for existing vertices before creating new ones
+        u = self.getVertex(u_url)
+        if u == None:
+            u = Vertex(u_url, self)
+        v = self.getVertex(v_url)
+        if v == None:
+            v = Vertex(v_url, self)
+        myEdge = Edge(u, v)
         self.addEdge(myEdge, addWeight)
 
     def printGraphSize(self):
@@ -241,9 +250,15 @@ class Vertex:
                 # (no need to add twice)
                 if v.url in urlsAdded:
                     continue
+
+            # NOTE: This whole for loop should just be ditched.
+            # I had initially wanted __adjacent to be a list of Vertex's
+            # Now, it's a list of urls (str). So really I could just replace
+            # this whole thing with a single line of code:
+                # self.__adjacent = inlinks+outlinks
                 
             # Then add the node to the list of adjacent nodes
-            self.__adjacent.append(v)
+            self.__adjacent.append(v.url)
             # keep track of which urls we've added to __adjacent
             # so the search complexity is easier for avoiding duplicates
             urlsAdded.append(v.url)
