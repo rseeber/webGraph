@@ -260,7 +260,10 @@ def robotsCheck(url):
                 time.sleep(5 * retry)
         else:
             logger.write("Couldn't get resource. Skipping check.")
-            return True, 0
+            allowed = True
+            delay = 0
+            robotCache.update({domain: [allowed, delay]})
+            return allowed, delay
 
 
         delay = rfp.crawl_delay(requestHeaders["User-Agent"])
