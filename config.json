@@ -1,5 +1,7 @@
 {
-    "maxDepth": 4,
+    "logFile": "log.txt",
+
+    "maxDepth": 3,
 
     "nameDefault": "IndiewebGraph-Depth-4",
 
