@@ -9,6 +9,7 @@ import signal
 import sys
 import socket
 
+import logger
 import graphHandler as gh
 
 # Create an empty graph to start
@@ -47,8 +48,6 @@ class Data:
         self.urlIndex = urlIndex
     def __str__(self):
         return f"{self.linkDict}, {self.linkProgressDict}, {self.urlIndex}"
-
-
 
 # returns (domain, resource) as a 2-tuple of a URL. Does not verify input.
 def splitURL(link, getDomain=""):
@@ -122,9 +121,9 @@ def parseWebpage(pageURL):
     if baseDelay == 0:
         baseDelay = 0.5
     while(retry < 3):
-        print("Fetching resource: "+pageURL)
+        logger.write("Fetching resource: "+pageURL)
         delay = 5 * retry + baseDelay
-        print("Waiting "+str(delay)+" seconds...")
+        logger.write("Waiting "+str(delay)+" seconds...")
         # 1, 6, 11, 16 seconds, etc
         time.sleep(delay)
         try:
@@ -132,7 +131,7 @@ def parseWebpage(pageURL):
             soup = BeautifulSoup(reqs.text, 'html.parser')
             break
         except Exception:
-            print("Exception caught. Retrying...")
+            logger.write("Exception caught. Retrying...")
             retry += 1
 
     inlinks = []
@@ -248,19 +247,19 @@ def robotsCheck(url):
 
         rfp.set_url(robotURL)
         retry = 0
-        print(f"Fetching robots file {robotURL}")
+        logger.write(f"Fetching robots file {robotURL}")
         while(retry < 10):
             try:
                 rfp.read()
                 break
             except Exception:
                 retry += 1
-                print(f"Couldn't get robots file for {domain}. Waiting {5*retry} seconds...")
+                logger.write(f"Couldn't get robots file for {domain}. Waiting {5*retry} seconds...")
                 if interrupt:
                     break
                 time.sleep(5 * retry)
         else:
-            print("Couldn't get resource. Skipping check.")
+            logger.write("Couldn't get resource. Skipping check.")
             return True, 0
 
 
@@ -323,7 +322,7 @@ def spider(startUrls, N, untrackedDomains, data=Data(), i=0):
 
     # if this is the first iteration, initialize the data
     if(i == 0):
-        print("START SPIDER CRAWL")
+        logger.write("START SPIDER CRAWL")
         """
         data = {
             "startUrls": startUrls,
@@ -373,7 +372,7 @@ def spider(startUrls, N, untrackedDomains, data=Data(), i=0):
 
         
 
-        print("waiting 1 second before fetching resource "+url)
+        logger.write("waiting 1 second before fetching resource "+url)
         time.sleep(1)
         # Parse the page
         inlinks, outlinks, outdomains = parseWebpage(url)
@@ -389,8 +388,8 @@ def spider(startUrls, N, untrackedDomains, data=Data(), i=0):
         #buildGraph(inlinks + outlinks, url, urls, edges, domainEdges)
 
         # display some data for the user
-        print("urls found: "+str(urls))
-        print("url count = "+str(len(urls)))
+        logger.write("urls found: "+str(urls))
+        logger.write("url count = "+str(len(urls)))
         linkCount += 1
         if(linkCount >= 10):
             break
@@ -403,7 +402,7 @@ def spider(startUrls, N, untrackedDomains, data=Data(), i=0):
     #data["domainEdges"].update(domainEdges)
 
     # recursion call
-    print("REPEAT SPIDER CALL ON "+str(urls))
+    logger.write("REPEAT SPIDER CALL ON "+str(urls))
     # parse the first k links in each link set
     k = 10
     return spider(urls, N-1, untrackedDomains, data, i+1)
@@ -473,6 +472,7 @@ def spiderDFS(startingNodes, maxDepth):
         u.color = "white"
     # Keep crawling until we've finished our DFS on each starting node
     while len(startingNodes) > 0:
+        logger.write("STARTING SPIDER!")
         # Dequeue an item from the front of the line
         u = startingNodes.pop(0)
         # Note: In Intro To Algorithms by CLRS, they only run DRF_visit() if u.color == white.
@@ -520,7 +520,7 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
         return
 
     if not u.isAdjacentCached():
-            print(f"Depth: {depth}")
+            logger.write(f"Depth: {depth}")
 
     # iterate through each of the adjacent nodes (shares an edge)
     for v in u.getAdjacent():
@@ -545,14 +545,14 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
     global lastSaved
     now = time.monotonic()
     if now - lastSaved >= (10 * 60):   # 10 minutes
-        print("Automatically saving backup to disk...")
+        logger.write("Automatically saving backup to disk...")
         # This probably deserves proper error handling at some point
         try:
             G.save(f"temp/{title}_backup__{getTimestamp()}")
-            print("Backup saved! Resuming crawl...")
+            logger.write("Backup saved! Resuming crawl...")
         except Exception as err:
-            print("WARNING: backup failed! See below:")
-            print(err)
+            logger.write("WARNING: backup failed! See below:")
+            logger.write(err)
         lastSaved = now
 
 
@@ -594,8 +594,8 @@ def interrupt_handler(sig, frame):
     # On the first interrupt, close gracefully
     # If the spider hasn't started, just close (nothing started yet)
     if not interrupt and spider_started:
-        print("\nINTERRUPT SIGNAL RECIEVED: Closing gracefully...")
-        print("(to force quit, send the interrupt again)")
+        logger.write("""\nINTERRUPT SIGNAL RECIEVED: Closing gracefully...
+(to force quit, send the interrupt again)\n""")
     else:
         exit()
     # To keep track of if this is the first interrupt
@@ -613,6 +613,7 @@ if __name__ == "__main__":
     startUrls = config["startUrls"]
     untrackedDomains = config["untrackedDomains"]
     maxDepth = config["maxDepth"]
+    logger.setFile("output/"+config["logFile"])
 
     # Convert startUrls from str's Vertex's
     startingNodes = []
@@ -650,22 +651,22 @@ if __name__ == "__main__":
     # run the spider
     if spiderOpt == 1:
         spiderDFS(startingNodes, maxDepth)
-        print("Saving data...")
+        logger.write("Saving data...")
         G.save(title)
-        print("Saved!")
+        logger.write("Saved!")
     
     #load from disk
     if spiderOpt == 2 or spiderOpt == 3:
-        print("Loading from disk...")
+        logger.write("Loading from disk...")
         G.load(title)
-        print("Successfully loaded graph!")
+        logger.write("Successfully loaded graph!")
 
     # resume spider (basically the same thing as start, just load the data first)
     if spiderOpt == 2:
         spiderDFS(startingNodes, maxDepth)
-        print("Saving data...")
+        logger.write("Saving data...")
         G.save(title)
-        print("Saved!")
+        logger.write("Saved!")
 
     # Save Graph to disk
     if spiderOpt == 1 or spiderOpt == 2:
@@ -679,21 +680,21 @@ if __name__ == "__main__":
         timestamp = getTimestamp()
         
         if analysisOpt == 1 or analysisOpt == 3:
-            print("PAGE GRAPH")
+            logger.write("PAGE GRAPH")
             G.printGraphSize()
 
             # Then convert to nx.Graph
             g = gh.graphToNxGraph(G)
-            print("DRAWING...")    
+            logger.write("DRAWING...")    
             gh.drawGraph(g, f"output/{title}_pageGraph__{timestamp}.jpg")
         
         if analysisOpt == 2 or analysisOpt == 3:
             # Convert page Graph into one representing domains only
-            print("DOMAIN GRAPH")
+            logger.write("DOMAIN GRAPH")
             DomainGraph = gh.graphToDomainGraph(G)
             DomainGraph.printGraphSize()
 
             # to nx.Graph
             g_domain = gh.graphToNxGraph(DomainGraph)
-            print("DRAWING...")
+            logger.write("DRAWING...")
             gh.drawGraph(g_domain, f"output/{title}_domainGraph__{timestamp}.jpg")

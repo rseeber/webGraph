@@ -5,6 +5,8 @@ import pickle
 import shutil
 import json
 
+import logger
+
 # Classes
 
 class Graph:
@@ -75,7 +77,7 @@ class Graph:
         self.addEdge(myEdge, addWeight)
 
     def printGraphSize(self):
-        print(f"Graph Size:\n\tNodes: {len(self.V)}\n\tEdges: {len(self.E)}")
+        logger.write(f"Graph Size:\n\tNodes: {len(self.V)}\n\tEdges: {len(self.E)}")
 
 
     def exportJson(self):
@@ -127,7 +129,7 @@ class Graph:
     # given a json-like python dict, load the data into the Graph
     def loadFromJson(self, myJson):
         if type(myJson) != dict:
-            print("ERROR: loadFromJson() requires a python dict as input, not "+type(myJson))
+            logger.write("ERROR: loadFromJson() requires a python dict as input, not "+type(myJson))
             return
         # iterate through list of nodes
         for i in range(len(myJson["V"])):
@@ -194,7 +196,7 @@ class Vertex:
     def setAdjacent(self, urls: list):
         # In case this ever gets called when it shouldn't be
         if self.__adjacent != None:
-            print("Vertex.setAdjacent(): WARNING: non-empty contents of __adjacent being overwritten! len = "+len(self.__adjacent))
+            logger.write("Vertex.setAdjacent(): WARNING: non-empty contents of __adjacent being overwritten! len = "+len(self.__adjacent))
         
         # wipe the list
         self.__adjacent = []
@@ -275,6 +277,7 @@ def graphToNxGraph(G: Graph):
     return g
 
 def graphToDomainGraph(G: Graph):
+    import scrape
     GG_domain = Graph()
 
     # go through each vertex in the original graph

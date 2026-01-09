@@ -1,4 +1,6 @@
 {
+    "logFile": "log.txt",
+
     "maxDepth": 3,
 
     "nameDefault": "Graph",
