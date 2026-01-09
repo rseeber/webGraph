@@ -458,7 +458,9 @@ def spiderBetter(startUrls, N, data=Data(), j=0):
 
 # spider using Depth-First Search algorithm, using Q as your starting nodes,
 # and crawling a maximum distance of `depth` from any of the starting nodes.
-def spiderDFS(startingNodes, maxDepth):
+def spiderDFS(startingUrls, maxDepth):
+    logger.write("STARTING SPIDER!")
+
     global spider_started
     spider_started = True
 
@@ -470,14 +472,11 @@ def spiderDFS(startingNodes, maxDepth):
     # just timeout at that point
     socket.setdefaulttimeout(30) 
 
-    # Assign all our "starting nodes" as unvisited
-    for u in startingNodes:
-        u.color = "white"
     # Keep crawling until we've finished our DFS on each starting node
-    while len(startingNodes) > 0:
-        logger.write("STARTING SPIDER!")
+    while len(startingUrls) > 0:
         # Dequeue an item from the front of the line
-        u = startingNodes.pop(0)
+        u = startingUrls.pop(0)
+        u = G.addVertex_url(u)
         # Note: In Intro To Algorithms by CLRS, they only run DRF_visit() if u.color == white.
         # We don't do that, since we are placing a depth constraint.
         #
@@ -623,11 +622,6 @@ if __name__ == "__main__":
     maxDepth = config["maxDepth"]
     logger.setFile("output/"+config["logFile"])
 
-    # Convert startUrls from str's Vertex's
-    startingNodes = []
-    for url in startUrls:
-        startingNodes.append(gh.Vertex(url, G))
-
     # handle runtime options
     spiderOpt = int(input("""What would you like to do?
     (1) Start the Spider
@@ -658,7 +652,7 @@ if __name__ == "__main__":
 
     # run the spider
     if spiderOpt == 1:
-        spiderDFS(startingNodes, maxDepth)
+        spiderDFS(startUrls, maxDepth)
         logger.write("Saving data...")
         G.save(title)
         logger.write("Saved!")
@@ -671,7 +665,7 @@ if __name__ == "__main__":
 
     # resume spider (basically the same thing as start, just load the data first)
     if spiderOpt == 2:
-        spiderDFS(startingNodes, maxDepth)
+        spiderDFS(startUrls, maxDepth)
         logger.write("Saving data...")
         G.save(title)
         logger.write("Saved!")
