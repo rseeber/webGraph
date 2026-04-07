@@ -131,15 +131,23 @@ class Graph:
 
     # Load data with the given title into the Graph
     def load(self, title):
+        logger.write("Loading from disk...")
+
+        logger.write("Loading {title}.json to memory as Python dict...")
         with open(f"output/{title}.json") as f:
             myJson = json.load(f)
+            logger.write("{title}.json loaded! Proceeding to loadFromJson()...")
             self.loadFromJson(myJson)
+
+        logger.write("Successfully loaded graph!")
 
     # given a json-like python dict, load the data into the Graph
     def loadFromJson(self, myJson):
         if type(myJson) != dict:
             logger.write("ERROR: loadFromJson() requires a python dict as input, not "+type(myJson))
             return
+
+        logger.write(f"Iterating through {len(myJson['V'])} nodes...")
         # iterate through list of nodes
         for i in range(len(myJson["V"])):
             # grab the url at index i
@@ -160,11 +168,14 @@ class Graph:
             # save the edge to the graph
             self.V.append(u)
 
+        logger.write(f"Finished adding nodes. Proceeding to iterate through each node to add edges...")
+        for u in self.V:
+            #logger.write(f"Iterating through {len(u.getAdjacent(fetch=False))} edges... ({u.url})")
             # iterate through the adjacency list for u
-            for j in range(len(edges)):
-                v_url = edges[j]
+            for j in range(len(u.getAdjacent(fetch=False))):
+                v_url = u.getAdjacent(fetch=False)[j]
                 # get the weight
-                edgeWeight = myJson["E_props"][url][j]["weight"]
+                edgeWeight = myJson["E_props"][u.url][j]["weight"]
                 # create the Edge object
                 # Notice that we're creating the edge using urls (str) not Vertex
                 #myEdge = Edge(u.url, v_url, weight=edgeWeight)
@@ -207,21 +218,27 @@ class Vertex:
         if self.__adjacent != None:
             logger.write("Vertex.setAdjacent(): WARNING: non-empty contents of __adjacent being overwritten! len = "+len(self.__adjacent))
         
-        # wipe the list
-        self.__adjacent = []
+        if type(urls) == list:
+            self.__adjacent = urls
 
-        # iterate through each item in the list, append it to __adjacent
-        for url in urls:
-            self.__adjacent.append(url)
+        # if it's a different type of collection, say a tuple, just iterate and append()
+        else:
+            for url in urls:
+                self.__adjacent.append(url)
 
     # Returns True if we've already fetched the webpage for this node
     def isAdjacentCached(self):
         return self.__adjacent != None
 
-    def getAdjacent(self):
+    def getAdjacent(self, fetch=True):
         # If we haven't fetched the webpage and indexed URLs yet, do that.
         if self.__adjacent == None:
+            # if we were instructed not to fetch, return -1
+            if not fetch:
+                return -1
+            # otherwise, go ahead
             self.__fetchPage()
+        # return it if you fetched or if you already had it cached
         return self.__adjacent
 
     def __fetchPage(self):

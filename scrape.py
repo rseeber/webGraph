@@ -661,9 +661,7 @@ if __name__ == "__main__":
     
     #load from disk
     if spiderOpt == 2 or spiderOpt == 3:
-        logger.write("Loading from disk...")
         G.load(title)
-        logger.write("Successfully loaded graph!")
 
     # resume spider (basically the same thing as start, just load the data first)
     if spiderOpt == 2:
