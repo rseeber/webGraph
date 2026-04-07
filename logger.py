@@ -2,6 +2,7 @@ import datetime
 
 file = None
 
+# set the log file. f should be a string to a local path file
 def setFile(f):
     global file
     file = f
@@ -16,3 +17,8 @@ def write(msg):
     # Log it
     with open(file, "a") as f:
         f.write(ouput+"\n")
+
+# Example Usage (preppend module to both functions, of course)
+if __name__ == "__main__":
+    setFile("example/log.txt")
+    write("hello, world")
