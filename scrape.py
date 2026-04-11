@@ -610,6 +610,7 @@ def pruneCache(wipe=False):
         # remove the oldest key
         oldestKey = cacheIndex.pop(0)
         # remove the corresponding oldest json
+        logger.write(f"Pruning {oldestKey} from cache...")
         updateJson_disk(cache.pop(oldestKey), oldestKey) # update the disk
 
 def updateCache(pageData, metaData, myJson, page, domain):
