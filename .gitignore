@@ -3,6 +3,11 @@ venv/
 output/
 example/
 data/
+_markdown/headstones/
+_markdown/node_modules
+_markdown/package-lock.json
+docs/
+
 
 debug.py
 
