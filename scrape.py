@@ -11,6 +11,7 @@ import socket
 
 import logger
 import graphHandler as gh
+import diskBased
 
 # Create an empty graph to start
 G = gh.Graph()
@@ -112,6 +113,8 @@ def standardizeLink(link, getDomain):
     
     return link
 
+# fetch the page, return a tuple (inlinks, outlinks, outdomains) based on <a> tags on the page
+# this function respects robots.txt files, and also has a by-default 0.5 second delay baked in
 def parseWebpage(pageURL):
     getDomain, getResource = splitURL(pageURL)
     retry = 0
@@ -493,6 +496,38 @@ def spiderDFS(startingUrls, maxDepth):
         if interrupt:
             break
 
+
+# spider using Depth-First Search algorithm, using Q as your starting nodes,
+# and crawling a maximum distance of `depth` from any of the starting nodes.
+def spiderDFS_diskBased(startingUrls: list[str], maxDepth: int):
+    logger.write("STARTING SPIDER!")
+
+    global spider_started
+    spider_started = True
+
+    # if it takes more than 30 seconds to grab something, honestly it deserves to
+    # just timeout at that point
+    socket.setdefaulttimeout(30) 
+
+    # Keep crawling until we've finished our DFS on each starting node
+    while len(startingUrls) > 0:
+        # Dequeue an item from the front of the line
+        u = startingUrls.pop(0)
+        # Note: In Intro To Algorithms by CLRS, they only run DRF_visit() if u.color == white.
+        # We don't do that, since we are placing a depth constraint.
+        #
+        # Basically, even though a longer path may have already discovered u, we check it again
+        # because this time we set u.dist to 0, instead of a higher number on that longer path.
+        # If we didn't care about distance from starting nodes, we wouldn't be doing this.
+        #
+        # Also, since fetching the webpage is much much slower than doing graph math,
+        # we can treat retracing our paths as having lower Big O time than the original
+        # fetching of the webpage, which only happens once, even if we retrace the node.
+        diskBased.spiderDFS_visit(u, 0, maxDepth)
+        if interrupt:
+            break
+
+
 # returns true if you should fetch the site, false otherwise.
 # It's based on both the untrackedDomains, and (eventually) the robots.txt protocol
 def siteCheck(url):
@@ -654,7 +689,7 @@ if __name__ == "__main__":
 
     # run the spider
     if spiderOpt == 1:
-        spiderDFS(startUrls, maxDepth)
+        spiderDFS_diskBased(startUrls, maxDepth)
         logger.write("Saving data...")
         G.save(title)
         logger.write("Saved!")

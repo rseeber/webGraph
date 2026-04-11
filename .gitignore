@@ -2,5 +2,8 @@ venv/
 
 output/
 example/
+data/
+
+debug.py
 
 __pycache__

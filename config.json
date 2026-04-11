@@ -3,7 +3,7 @@
 
     "maxDepth": 3,
 
-    "nameDefault": "TEMP__IndiewebGraph-Depth-6",
+    "nameDefault": "junkRun__IndiewebGraph-Depth-6",
 
     "startUrls" : [
         "https://riverseeber.net/blog/",
