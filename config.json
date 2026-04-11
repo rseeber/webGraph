@@ -1,14 +1,14 @@
 {
     "logFile": "log.txt",
 
-    "maxDepth": 3,
+    "maxDepth": 4,
 
     "nameDefault": "junkRun__IndiewebGraph-Depth-6",
 
     "startUrls" : [
         "https://riverseeber.net/blog/",
-	    "https://www.hazelthayer.com/",
         "https://smallweb.site/", 
+        "https://gnomes.neocities.org/",
         "https://ribo.zone/"
     ],
 

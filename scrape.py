@@ -24,6 +24,20 @@ robotCache = {}
 
 global lastSaved
 
+
+# === Disk Based ===
+
+# 2 weeks = 60 sec/min * 60 min/hr * 24 hr/day * 7 day/week * 2
+RESOURCE_EXPIRY = 60 * 60 * 24 * 7 * 2
+
+# 500 MiB
+MAX_CACHE = 500 * pow(2, 20)
+cache = {}
+cacheIndex = []
+
+# === end Disk Based ===
+
+
 class Data:
     # linkDict
     # >>> {
@@ -497,6 +511,8 @@ def spiderDFS(startingUrls, maxDepth):
             break
 
 
+# === DISK BASED FUNCTIONS START ===
+
 # spider using Depth-First Search algorithm, using Q as your starting nodes,
 # and crawling a maximum distance of `depth` from any of the starting nodes.
 def spiderDFS_diskBased(startingUrls: list[str], maxDepth: int):
@@ -523,9 +539,174 @@ def spiderDFS_diskBased(startingUrls: list[str], maxDepth: int):
         # Also, since fetching the webpage is much much slower than doing graph math,
         # we can treat retracing our paths as having lower Big O time than the original
         # fetching of the webpage, which only happens once, even if we retrace the node.
-        diskBased.spiderDFS_visit(u, 0, maxDepth)
+        spiderDFS_visit_diskBased(u, 0, maxDepth)
         if interrupt:
             break
+    pruneCache(wipe=True)
+
+# gets the json for this domain from cache if available, or else fetches from disk
+def getJson(domain):
+    # check if it's cached
+    if domain in cache:
+        # pull from the cache
+        myJson = cache[domain]
+    # if not, fetch it from the file on the disk
+    else:
+        myJson = getJson_disk(domain) # performs a file read
+
+        # append it to the cache
+        cacheIndex.append(domain)
+        cache[domain] = myJson
+
+        # prune cache if memory limits are reached
+        # we update the disk during pruning
+        pruneCache()
+
+
+    return myJson
+
+# return the json for this domain, creating one if it doesn't exist
+def getJson_disk(domain):
+    filename = f"data/{domain}.json"
+    # Try to open the file
+    try:
+        with open(filename, "r") as f:
+            file = f.read()
+    # If not there, create the file
+    except FileNotFoundError:
+        # base data
+        data = {"!metadata":{}, "pages": {}, "domain": domain}
+        # as prettified json (for human readability)
+        data = json.dumps(data, sort_keys=True, indent=4)
+        # save that string to the file
+        with open(filename, "a") as f:
+            f.write(data)
+
+        # read the file
+        with open(filename, "r") as f:
+            file = f.read()
+
+    # return the file as a python dict
+    myJson = json.loads(file)
+    return myJson
+ 
+# takes myJson as a python dict, and overwrites the disk saved json with the new data
+def updateJson_disk(myJson, domain):
+    #set the filename
+    filename = f"data/{domain}.json"
+
+    # convert python dict to str
+    data = json.dumps(myJson, sort_keys=True, indent=4)
+    # overwrite the file with the new data
+    with open(filename, "w") as f:
+        f.write(data)
+    return
+
+# removes the oldest entries of the cache until memory limits are satisfied.
+# the disk is updated to the new values of the cached item during pruning
+# set wipe=True to totally empty the cache and save to disk
+def pruneCache(wipe=False):
+    while (wipe and len(cacheIndex) > 0) or len(json.dumps(cache)) > MAX_CACHE:
+        # remove the oldest key
+        oldestKey = cacheIndex.pop(0)
+        # remove the corresponding oldest json
+        updateJson_disk(cache.pop(oldestKey), oldestKey) # update the disk
+
+def updateCache(pageData, metaData, myJson, page, domain):
+    pageData["metadata"] = metaData     # fit metaData into pageData
+    myJson["pages"][page] = pageData    # fit pageData into myJson
+    cache[domain] = myJson              # fit myJson into the cache
+
+# fetch the page, returning the updated pageData and metaData values for that page
+def fetchPage(url, pageData, metaData):
+    inlinks, outlinks, outdomains = parseWebpage(url)
+    edges = inlinks + outlinks
+
+    # update the pageData to match
+    pageData["edges"] = edges
+    # update the metadata
+    metaData["age"] = time.time()
+    metaData["color"] = "gray"
+
+    return pageData, metaData
+
+# visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
+def spiderDFS_visit_diskBased(url: str, depth: int, maxDepth: int):
+
+    # get the json for this domain as a python dict
+    domain, page = splitURL(url)
+    page = "/"+page
+
+    myJson = getJson(domain) # this has side effects on the cache potentially
+
+    # check if the page has been visited before
+    if page in myJson["pages"]:
+        pageData = myJson["pages"][page]
+        metaData = pageData["metadata"]
+    # if this is our fist time on this node, add it to the graph
+    else:
+        # create the json for this specific page (we'll append it to myJson later)
+        pageData = {"metadata":{}, "edges": []}
+        metaData = pageData["metadata"]
+        # set the metadata for this page
+        metaData["color"] = "white"
+
+    # Base Case #1
+    # Stop digging if we've hit our maxDepth or if this is a no-go site
+    if (depth >= maxDepth or not siteCheck(url)):
+        # Notice that we don't set the color to black, since
+        # we might come back on a spiderDFS_resume() call. 
+        # So we keep it gray in order to denote the threshold 
+        # of discovery.
+        return
+
+    # fetch the page if we haven't done so yet, or if it's expired
+    if (metaData["color"] == "white") or (time.time() - metaData["age"] > RESOURCE_EXPIRY):
+        pageData, metaData = fetchPage(url, pageData, metaData)
+    # collect all the links
+    edges = pageData["edges"]
+
+    # update the cache for our updates to the json
+    updateCache(pageData, metaData, myJson, page, domain)
+
+    # iterate through each of the adjacent nodes (shares an edge)
+    for e in edges:
+        # get info abt this edge
+        eDomain, ePage = splitURL(e)
+        ePage = "/"+ePage
+        eJson = getJson(eDomain) # this func has side effects
+
+        # check if a json exists for this page, creating one if not
+        if ePage not in eJson["pages"]:
+            # create the json for this specific page (we'll append it to myJson later)
+            ePageData = {"metadata":{}, "edges": []}
+            eMetaData = ePageData["metadata"]
+            # set the metadata for this page
+            eMetaData["color"] = "white"
+            # update the cache so the page json is available in the next recursion loop
+            updateCache(ePageData, eMetaData, eJson, ePage, eDomain)
+        # otherwise, pull it from our existing domain json
+        else:
+            ePageData = eJson["pages"][ePage]
+
+
+        # Recursive Case
+        ## we check for unvisited nodes
+        if(ePageData["metadata"]["color"] == "white"):
+            # Stop going deeper if we've been told to stop
+            if interrupt:
+                break
+            # visit the child node, incrementing the depth by 1
+            spiderDFS_visit_diskBased(e, depth + 1, maxDepth)
+        # Base Case #2
+        else:
+            pass
+    # set the color as black after we've explored all the edges
+    metaData["color"] = "black"
+    updateCache(pageData, metaData, myJson, page, domain)
+
+# === End Disk Based Functions ===
+
 
 
 # returns true if you should fetch the site, false otherwise.
