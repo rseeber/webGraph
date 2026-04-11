@@ -3,7 +3,9 @@
 
     "maxDepth": 3,
 
-    "nameDefault": "TEMP__IndiewebGraph-Depth-6",
+    "threadMax": 5,
+
+    "nameDefault": "threaded-webgraph-test",
 
     "startUrls" : [
         "https://riverseeber.net/blog/",

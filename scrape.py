@@ -8,6 +8,7 @@ import networkx as nx
 import signal
 import sys
 import socket
+import threading
 
 import logger
 import graphHandler as gh
@@ -22,6 +23,9 @@ spider_started = False
 robotCache = {}
 
 global lastSaved
+
+threadCount = 0
+#THREAD_MAX is complimentary to threadCount
 
 class Data:
     # linkDict
@@ -508,6 +512,7 @@ def siteCheck(url):
 
 # visits a node, recursively tracing down until it hits a leaf or reaches maxDepth
 def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
+    global threadCount
     # if this is our fist time on this node, add it to the graph
     if(G.getVertex(u) == None):
         G.V.append(u)
@@ -544,7 +549,15 @@ def spiderDFS_visit(u: gh.Vertex, depth: int, maxDepth: int):
             if interrupt:
                 break
             # visit the child node, incrementing the depth by 1
-            spiderDFS_visit(v, depth + 1, maxDepth)
+            ## Do it threaded if we have more thread availability
+            if threadCount < THREAD_MAX:
+                threadCount += 1
+                logger.write(f"STARTING THREAD #{threadCount}")
+                threading.Thread(target=spiderDFS_visit, args=(v, depth + 1, maxDepth))
+            ## Otherwise, just stay on the same thread. Wait until you finish this
+            ## recursive visit before handling the next iteration of this for loop
+            else:
+                spiderDFS_visit(v, depth + 1, maxDepth)
         # Base Case #2
         else:
             pass
@@ -612,6 +625,7 @@ def interrupt_handler(sig, frame):
 
 
 if __name__ == "__main__":
+    global THREAD_MAX
     # register interrupt_handler() to be called when pressing Ctrl+C
     signal.signal(signal.SIGINT, interrupt_handler)
 
@@ -622,6 +636,7 @@ if __name__ == "__main__":
     startUrls = config["startUrls"]
     untrackedDomains = config["untrackedDomains"]
     maxDepth = config["maxDepth"]
+    THREAD_MAX = config["threadMax"]
     logger.setFile("output/"+config["logFile"])
 
     # handle runtime options
