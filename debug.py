@@ -14,4 +14,9 @@ def foo(maxCount, count=0):
     # BASE CASE
     return
 
-foo(1)
+def accessVar():
+    print(x)
+
+global x
+x = 1
+accessVar()

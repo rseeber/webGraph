@@ -3,6 +3,10 @@
 
     "maxDepth": 4,
 
+    "maxCache_MiB": 200,
+
+    "resourceExpiry_days": 14,
+
     "nameDefault": "junkRun__IndiewebGraph-Depth-4",
 
     "startUrls" : [

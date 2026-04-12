@@ -8,6 +8,7 @@ import networkx as nx
 import signal
 import sys
 import socket
+import os
 
 import logger
 import graphHandler as gh
@@ -30,8 +31,8 @@ global lastSaved
 # 2 weeks = 60 sec/min * 60 min/hr * 24 hr/day * 7 day/week * 2
 RESOURCE_EXPIRY = 60 * 60 * 24 * 7 * 2
 
-# 500 MiB
-MAX_CACHE = 500 * pow(2, 20)
+# 200 MiB
+MAX_CACHE = 200 * pow(2, 20)
 cache = {}
 cacheIndex = []
 
@@ -568,7 +569,7 @@ def getJson(domain):
 
 # return the json for this domain, creating one if it doesn't exist
 def getJson_disk(domain):
-    filename = f"data/{domain}.json"
+    filename = f"data/{title}/{domain}.json"
     # Try to open the file
     try:
         with open(filename, "r") as f:
@@ -594,7 +595,7 @@ def getJson_disk(domain):
 # takes myJson as a python dict, and overwrites the disk saved json with the new data
 def updateJson_disk(myJson, domain):
     #set the filename
-    filename = f"data/{domain}.json"
+    filename = f"data/{title}/{domain}.json"
 
     # convert python dict to str
     data = json.dumps(myJson, sort_keys=True, indent=4)
@@ -843,14 +844,21 @@ if __name__ == "__main__":
     # register interrupt_handler() to be called when pressing Ctrl+C
     signal.signal(signal.SIGINT, interrupt_handler)
 
+    # CONFIG VALUES
     # load config.json
     with open("config.json", "r") as f:
         config = json.load(f)
+
     # initialize the values
     startUrls = config["startUrls"]
     untrackedDomains = config["untrackedDomains"]
     maxDepth = config["maxDepth"]
     logger.setFile("output/"+config["logFile"])
+
+    # 1 day = 60 sec/min * 60 min/hr * 24 hr/day
+    RESOURCE_EXPIRY = config["resourceExpiry_days"] * (60 * 60 * 24)
+    MAX_CACHE = config["maxCache_MiB"] * pow(2, 20)
+
 
     global title
     nameDefault = config["nameDefault"]
@@ -865,6 +873,7 @@ if __name__ == "__main__":
     except Exception:
         title = nameOpt
 
+    os.makedirs(f"data/{title}")
 
     # run the spider
     spiderDFS_diskBased(startUrls, maxDepth)
