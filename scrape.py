@@ -542,6 +542,7 @@ def spiderDFS_diskBased(startingUrls: list[str], maxDepth: int):
         spiderDFS_visit_diskBased(u, 0, maxDepth)
         if interrupt:
             break
+    logger.write("Exploration of starting nodes concluded. Saving cache to disk...")
     pruneCache(wipe=True)
 
 # gets the json for this domain from cache if available, or else fetches from disk
@@ -606,12 +607,16 @@ def updateJson_disk(myJson, domain):
 # the disk is updated to the new values of the cached item during pruning
 # set wipe=True to totally empty the cache and save to disk
 def pruneCache(wipe=False):
+    logger.write(f"Performing pruneCache() with wipe={wipe}")
+    logger.write(f"mem size = {len(json.dumps(cache))}, entering while loop...")
     while (wipe and len(cacheIndex) > 0) or len(json.dumps(cache)) > MAX_CACHE:
         # remove the oldest key
         oldestKey = cacheIndex.pop(0)
         # remove the corresponding oldest json
         logger.write(f"Pruning {oldestKey} from cache...")
         updateJson_disk(cache.pop(oldestKey), oldestKey) # update the disk
+    logger.write("pruneCache() concluded")
+    return
 
 def updateCache(pageData, metaData, myJson, page, domain):
     pageData["metadata"] = metaData     # fit metaData into pageData
@@ -696,6 +701,7 @@ def spiderDFS_visit_diskBased(url: str, depth: int, maxDepth: int):
         if(ePageData["metadata"]["color"] == "white"):
             # Stop going deeper if we've been told to stop
             if interrupt:
+                logger.log("Interrupt break occuring, exiting for loop.")
                 break
             # visit the child node, incrementing the depth by 1
             spiderDFS_visit_diskBased(e, depth + 1, maxDepth)
