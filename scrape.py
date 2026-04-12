@@ -607,15 +607,19 @@ def updateJson_disk(myJson, domain):
 # the disk is updated to the new values of the cached item during pruning
 # set wipe=True to totally empty the cache and save to disk
 def pruneCache(wipe=False):
-    logger.write(f"Performing pruneCache() with wipe={wipe}")
-    logger.write(f"mem size = {len(json.dumps(cache))}, entering while loop...")
+    if wipe:
+        logger.write(f"Performing pruneCache() with wipe")
+    mem = len(json.dumps(cache))
+    flag = False
     while (wipe and len(cacheIndex) > 0) or len(json.dumps(cache)) > MAX_CACHE:
+        flag = True
         # remove the oldest key
         oldestKey = cacheIndex.pop(0)
         # remove the corresponding oldest json
         logger.write(f"Pruning {oldestKey} from cache...")
         updateJson_disk(cache.pop(oldestKey), oldestKey) # update the disk
-    logger.write("pruneCache() concluded")
+    if flag:
+        logger.write(f"mem size before = {mem}, after = {len(json.dumps(cache))}")
     return
 
 def updateCache(pageData, metaData, myJson, page, domain):
