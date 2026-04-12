@@ -3,7 +3,7 @@
 
     "maxDepth": 4,
 
-    "nameDefault": "junkRun__IndiewebGraph-Depth-6",
+    "nameDefault": "junkRun__IndiewebGraph-Depth-4",
 
     "startUrls" : [
         "https://riverseeber.net/blog/",
@@ -14,13 +14,25 @@
 
     "untrackedDomains" : [
         "google.com", "x.com", "twitter.com", "facebook.com", "reddit.com", 
-        "youtube.com", "amazon.com", "amazon.co.uk", "wikipedia.org",
-        "linkedin.com", "flickr.com", "11ty.dev", "archlinux.org", "stackoverflow.com",
+        "youtube.com", "amazon.com", "amazon.co.uk", "linkedin.com", 
+        "flickr.com", "instagram.com", "goodreads.com", "bookshop.org",
+
+       	"wikipedia.org", "11ty.dev", "archlinux.org", "stackoverflow.com",
         "stackexchange.com", "superuser.com", "github.com", "archive.org",
-        "w3schools.com", "lifehacker.com", "instagram.com", "goodreads.com",
-        "bookshop.org", "openlibrary.org", "gutenburg.org", "torpublishinggroup.com",
+        "w3schools.com",  "openlibrary.org", "gutenburg.org", "torpublishinggroup.com",
         "tiktok.com", "macmillan.com", "apple.com", "mozilla.org", "archive-it.org", 
-        "githubstatus.com", "patreon.com", "bitly.com", ".org", ".gov", ".edu"
+        "githubstatus.com", "patreon.com", "bitly.com", 
+
+        "lifehacker.com", "buzzfeed.com", "apnews.com", "www.latimes.com", 
+        "news.google.com", "404media.co", "arstechnica.com", "defector.com",
+        "vice.com", "huffpost.com", "propublica.org", "hearingthings.co", 
+        "niemanlab.org", "theguardian.com", "democracynow.org", "labornotes.org",
+        "cbc.ca", "ft.com", "economist.com", "washingtonpost.com", "cnn.com", 
+        "nytimes.com", "npr.org", "reuters.com", "bbc.com", "nbcnews.com", 
+        "abcnews.go.com", "cbsnews.com",
+
+        
+        ".org", ".gov", ".edu", ".ai"
     ]
 
 }
