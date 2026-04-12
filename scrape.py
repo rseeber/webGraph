@@ -701,7 +701,7 @@ def spiderDFS_visit_diskBased(url: str, depth: int, maxDepth: int):
         if(ePageData["metadata"]["color"] == "white"):
             # Stop going deeper if we've been told to stop
             if interrupt:
-                logger.log("Interrupt break occuring, exiting for loop.")
+                logger.write("Interrupt break occuring, exiting for loop.")
                 break
             # visit the child node, incrementing the depth by 1
             spiderDFS_visit_diskBased(e, depth + 1, maxDepth)
