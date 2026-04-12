@@ -1,10 +1,17 @@
 import json
+import traceback
+import inspect
 
 
-cache = {"a": 1, "b": 2, "c": 3}
+def foo(maxCount, count=0):
+    x = inspect.stack()
+    print(x)
 
-print(json.dumps(cache))
+    # RECURSIVE CASE
+    if count < maxCount:
+        print()
+        foo(count+1, maxCount)
+    # BASE CASE
+    return
 
-print(len(json.dumps(cache)))
-
-input()
+foo(1)
