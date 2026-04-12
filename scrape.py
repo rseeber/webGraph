@@ -833,6 +833,7 @@ def interrupt_handler(sig, frame):
         logger.write("""\nINTERRUPT SIGNAL RECIEVED: Closing gracefully...
 (to force quit, send the interrupt again)\n""")
     else:
+        logger.write("""\nSECOND INTERRUPT RECIEVED: Force quiting now...""")
         exit()
     # To keep track of if this is the first interrupt
     interrupt = True
@@ -851,20 +852,6 @@ if __name__ == "__main__":
     maxDepth = config["maxDepth"]
     logger.setFile("output/"+config["logFile"])
 
-    # handle runtime options
-    spiderOpt = int(input("""What would you like to do?
-    (1) Start the Spider
-    (2) Resume the spider
-    (3) Load the most recent graph and analyze it
-> """))
-
-    analysisOpt = int(input("""Analyze which graphs?
-    (1) Page Graph
-    (2) Domain Graph
-    (3) Both    
-    (4) Neither
-> """))
-
     global title
     nameDefault = config["nameDefault"]
     nameOpt = input(f"What is this crawl called (or what crawl are we loading)?\n(0)=\033[1;4m{nameDefault}\033[m, (1)=Spider, (2)=Crawl\n> ")
@@ -880,50 +867,5 @@ if __name__ == "__main__":
 
 
     # run the spider
-    if spiderOpt == 1:
-        spiderDFS_diskBased(startUrls, maxDepth)
-        logger.write("Saving data...")
-        G.save(title)
-        logger.write("Saved!")
+    spiderDFS_diskBased(startUrls, maxDepth)
     
-    #load from disk
-    if spiderOpt == 2 or spiderOpt == 3:
-        G.load(title)
-
-    # resume spider (basically the same thing as start, just load the data first)
-    if spiderOpt == 2:
-        spiderDFS(startUrls, maxDepth)
-        logger.write("Saving data...")
-        G.save(title)
-        logger.write("Saved!")
-
-    # Save Graph to disk
-    if spiderOpt == 1 or spiderOpt == 2:
-        pass
-
-    # analysis
-    if spiderOpt <= 3:
-
-
-
-        timestamp = getTimestamp()
-        
-        if analysisOpt == 1 or analysisOpt == 3:
-            logger.write("PAGE GRAPH")
-            G.printGraphSize()
-
-            # Then convert to nx.Graph
-            g = gh.graphToNxGraph(G)
-            logger.write("DRAWING...")    
-            gh.drawGraph(g, f"output/{title}_pageGraph__{timestamp}.jpg")
-        
-        if analysisOpt == 2 or analysisOpt == 3:
-            # Convert page Graph into one representing domains only
-            logger.write("DOMAIN GRAPH")
-            DomainGraph = gh.graphToDomainGraph(G)
-            DomainGraph.printGraphSize()
-
-            # to nx.Graph
-            g_domain = gh.graphToNxGraph(DomainGraph)
-            logger.write("DRAWING...")
-            gh.drawGraph(g_domain, f"output/{title}_domainGraph__{timestamp}.jpg")
