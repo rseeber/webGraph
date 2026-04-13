@@ -1,6 +1,10 @@
 import json
 import traceback
 import inspect
+import glob
+
+def globTest():
+    print(glob.glob("data/data-archived/*.json"))
 
 
 def foo(maxCount, count=0):
@@ -17,6 +21,4 @@ def foo(maxCount, count=0):
 def accessVar():
     print(x)
 
-global x
-x = 1
-accessVar()
+globTest()

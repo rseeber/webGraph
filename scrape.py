@@ -9,6 +9,7 @@ import signal
 import sys
 import socket
 import os
+import glob
 
 import logger
 import graphHandler as gh
@@ -145,7 +146,7 @@ def parseWebpage(pageURL):
         # 1, 6, 11, 16 seconds, etc
         time.sleep(delay)
         try:
-            reqs = requests.get(pageURL, headers=requestHeaders)
+            reqs = requests.get(pageURL, headers=requestHeaders, timeout=30)
             soup = BeautifulSoup(reqs.text, 'html.parser')
             break
         except Exception:
@@ -717,6 +718,26 @@ def spiderDFS_visit_diskBased(url: str, depth: int, maxDepth: int):
     metaData["color"] = "black"
     updateCache(pageData, metaData, myJson, page, domain)
 
+def resetNodeColors():
+    # get the list of files in the dataset
+    domains = glob.glob(f"data/{title}/*.json")
+    # iterate through each file
+    for d in domains:
+        # open the file
+        with open(d, "r") as f:
+            file = f.read()
+        # parse the json
+        myJson = json.loads(file)
+
+        #iterate through each node (link)
+        nodes = myJson["pages"].keys()
+        for key in nodes:
+            # set the color to white (unexplored)
+            myJson["pages"][key]["metadata"]["color"] = "white"
+
+
+
+
 # === End Disk Based Functions ===
 
 
@@ -859,6 +880,12 @@ if __name__ == "__main__":
     RESOURCE_EXPIRY = config["resourceExpiry_days"] * (60 * 60 * 24)
     MAX_CACHE = config["maxCache_MiB"] * pow(2, 20)
 
+    spiderOpt = input("""What would you like to do?
+(1) Start or Extend a graph
+(2) Resume a run that was interrupted
+
+> """)
+
 
     global title
     nameDefault = config["nameDefault"]
@@ -873,7 +900,14 @@ if __name__ == "__main__":
     except Exception:
         title = nameOpt
 
-    os.makedirs(f"data/{title}")
+    datasetDir = f"data/{title}"
+    if not os.path.exists(datasetDir):
+        os.makedirs(datasetDir)
+
+    # Clean run
+    if spiderOpt == 1:
+        # reset all node values to white
+        resetNodeColors()
 
     # run the spider
     spiderDFS_diskBased(startUrls, maxDepth)

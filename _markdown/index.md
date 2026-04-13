@@ -1,5 +1,6 @@
 ---
-title: title
+title: "Web Graph"
+layout: "layout.html"
 ---
 
-[Proceed to the experience](/headstones)
+# [browse](/browse/)

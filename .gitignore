@@ -4,6 +4,7 @@ output/
 example/
 data/
 _markdown/headstones/
+_markdown/browse/
 _markdown/node_modules
 _markdown/package-lock.json
 docs/
